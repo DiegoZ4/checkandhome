@@ -10,7 +10,7 @@ export default function Home() {
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
               <Building2 className="h-8 w-8 text-indigo-600" />
-              <h1 className="ml-3 text-2xl font-bold text-gray-900">Check and Home</h1>
+              <h1 className="ml-3 text-2xl font-bold text-gray-900">Check and Point</h1>
             </div>
             <nav className="hidden md:flex space-x-8">
               <Link href="/dashboard" className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">

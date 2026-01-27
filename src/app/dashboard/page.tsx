@@ -181,7 +181,7 @@ export default function DashboardPage() {
             <Building2 className="h-12 w-12 text-indigo-600" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Iniciar Sesión en Check and Home
+            Iniciar Sesión en Check and Point
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Sistema Demo - Prueba: admin@demo.com / password123
@@ -281,7 +281,7 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
               <Building2 className="h-8 w-8 text-indigo-600" />
-              <h1 className="ml-3 text-2xl font-bold text-gray-900">Panel de Control Check and Home</h1>
+              <h1 className="ml-3 text-2xl font-bold text-gray-900">Panel de Control Check and Point</h1>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-500">Bienvenido, {user?.role}</span>

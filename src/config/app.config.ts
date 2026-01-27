@@ -1,6 +1,6 @@
-// Configuración para Check and Home - Sistema de Reservas
+// Configuración para Check and Point - Sistema de Reservas
 export const APP_CONFIG = {
-  appName: 'Check and Home',
+  appName: 'Check and Point',
   version: '1.0.0',
   
   // Configuración de canales (Channel Manager)
@@ -189,13 +189,13 @@ export const APP_CONFIG = {
 
 // Configuración de desarrollo (localStorage keys)
 export const STORAGE_KEYS = {
-  AUTH_TOKEN: 'checkAndHomeToken',
-  USER_DATA: 'checkAndHomeUser',
-  UNITS: 'checkAndHomeUnits',
-  BOOKINGS: 'checkAndHomeBookings',
-  EXPENSES: 'checkAndHomeExpenses',
-  INVENTORY: 'checkAndHomeInventory',
-  SETTINGS: 'checkAndHomeSettings'
+  AUTH_TOKEN: 'checkAndPointToken',
+  USER_DATA: 'checkAndPointUser',
+  UNITS: 'checkAndPointUnits',
+  BOOKINGS: 'checkAndPointBookings',
+  EXPENSES: 'checkAndPointExpenses',
+  INVENTORY: 'checkAndPointInventory',
+  SETTINGS: 'checkAndPointSettings'
 }
 
 // Utilidades para manejo de fechas

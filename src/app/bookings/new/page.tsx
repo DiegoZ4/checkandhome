@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Users, MapPin, DollarSign, Clock } from 'lucide-react'
+import { Calendar, Users, MapPin, DollarSign, Clock, Building2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 

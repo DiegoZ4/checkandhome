@@ -1,0 +1,253 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum UserRole {
+  ADMIN
+  GUEST
+  OWNER
+  CLEANER
+  CHECKINOUT
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      UserRole @default(GUEST)
+  phone     String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  ownedUnits      Unit[]      @relation("OwnerUnits")
+  bookings        Booking[]
+  cleaningTasks   Cleaning[]
+  checkInOutTasks CheckInOut[]
+  expenses        Expense[]
+
+  @@map("users")
+}
+
+model Amenity {
+  id   String  @id @default(cuid())
+  name String  @unique
+  logo String?
+
+  // Relations
+  units UnitAmenity[]
+
+  @@map("amenities")
+}
+
+model Unit {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  address     String
+  pricePerDay Float   // Price in USD
+  currency    String  @default("USD")
+  active      Boolean @default(true)
+  ownerId     String
+
+  // Relations
+  owner        User           @relation("OwnerUnits", fields: [ownerId], references: [id])
+  amenities    UnitAmenity[]
+  photos       UnitPhoto[]
+  bookings     Booking[]
+  availability Availability[]
+  inventory    Inventory[]
+  cleanings    Cleaning[]
+  checkInOuts  CheckInOut[]
+  expenses     Expense[]
+
+  @@map("units")
+}
+
+model UnitAmenity {
+  unitId    String
+  amenityId String
+
+  unit    Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  amenity Amenity @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([unitId, amenityId])
+  @@map("unit_amenities")
+}
+
+model UnitPhoto {
+  id       String  @id @default(cuid())
+  unitId   String
+  url      String
+  caption  String?
+  order    Int     @default(0)
+  isPrimary Boolean @default(false)
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@map("unit_photos")
+}
+
+model Availability {
+  id        String    @id @default(cuid())
+  unitId    String
+  date      DateTime
+  available Boolean   @default(true)
+  price     Float?    // Override daily price for specific dates
+  minStay   Int?      // Minimum stay for this date
+  maxStay   Int?      // Maximum stay for this date
+  notes     String?
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([unitId, date])
+  @@map("availability")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  CHECKEDIN
+  CHECKEDOUT
+}
+
+enum BookingSource {
+  DIRECT
+  AIRBNB
+  BOOKING_COM
+  OTHER
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  unitId          String
+  guestId         String
+  checkIn         DateTime
+  checkOut        DateTime
+  totalPrice      Float
+  currency        String        @default("USD")
+  status          BookingStatus @default(PENDING)
+  source          BookingSource @default(DIRECT)
+  externalId      String?       // ID from channel manager (Airbnb, Booking.com)
+  guestName       String
+  guestEmail      String
+  guestPhone      String?
+  numberOfGuests  Int           @default(1)
+  specialRequests String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  unit        Unit         @relation(fields: [unitId], references: [id])
+  guest       User         @relation(fields: [guestId], references: [id])
+  cleanings   Cleaning[]
+  checkInOuts CheckInOut[]
+
+  @@map("bookings")
+}
+
+model Cleaning {
+  id         String   @id @default(cuid())
+  unitId     String
+  bookingId  String?
+  cleanerId  String
+  scheduled  DateTime
+  completed  DateTime?
+  notes      String?
+  cost       Float?
+  createdAt  DateTime @default(now())
+
+  // Relations
+  unit    Unit     @relation(fields: [unitId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
+  cleaner User     @relation(fields: [cleanerId], references: [id])
+
+  @@map("cleanings")
+}
+
+model CheckInOut {
+  id        String    @id @default(cuid())
+  bookingId String
+  unitId    String
+  staffId   String
+  type      String    // "CHECK_IN" or "CHECK_OUT"
+  scheduled DateTime
+  completed DateTime?
+  notes     String?
+  createdAt DateTime  @default(now())
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id])
+  unit    Unit    @relation(fields: [unitId], references: [id])
+  staff   User    @relation(fields: [staffId], references: [id])
+
+  @@map("check_in_outs")
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  userId      String
+  unitId      String?
+  description String
+  amount      Float
+  currency    String   @default("USD")
+  category    String?  // "MAINTENANCE", "SUPPLIES", "UTILITIES", etc.
+  date        DateTime @default(now())
+  receipt     String?  // URL to receipt image
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user User  @relation(fields: [userId], references: [id])
+  unit Unit? @relation(fields: [unitId], references: [id])
+
+  @@map("expenses")
+}
+
+model Inventory {
+  id          String   @id @default(cuid())
+  unitId      String
+  name        String
+  description String?
+  quantity    Int      @default(0)
+  minQuantity Int      @default(0)
+  cost        Float?
+  supplier    String?
+  lastUpdated DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  // Relations
+  unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  consumptions Consumption[]
+
+  @@map("inventory")
+}
+
+model Consumption {
+  id          String   @id @default(cuid())
+  inventoryId String
+  quantity    Int
+  notes       String?
+  consumedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  // Relations
+  inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  @@map("consumptions")
+}

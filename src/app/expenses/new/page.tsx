@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Receipt, DollarSign, Calendar, Tag, Upload, ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import Navbar from '@/components/Navbar'
 
 interface Unit {
   id: number
@@ -41,7 +42,7 @@ export default function NewExpensePage() {
   useEffect(() => {
     // Cargar propiedades
     try {
-      const storedUnits = JSON.parse(localStorage.getItem('checkAndHomeUnits') || '[]')
+      const storedUnits = JSON.parse(localStorage.getItem('checkAndPointUnits') || '[]')
       setUnits(storedUnits)
     } catch (error) {
       console.error('Error loading units:', error)
@@ -98,7 +99,7 @@ export default function NewExpensePage() {
 
     try {
       // Obtener gastos existentes
-      const existingExpenses = JSON.parse(localStorage.getItem('checkAndHomeExpenses') || '[]')
+      const existingExpenses = JSON.parse(localStorage.getItem('checkAndPointExpenses') || '[]')
       
       // Crear nuevo gasto
       const newExpense = {
@@ -114,7 +115,7 @@ export default function NewExpensePage() {
 
       // Guardar en localStorage
       const updatedExpenses = [...existingExpenses, newExpense]
-      localStorage.setItem('checkAndHomeExpenses', JSON.stringify(updatedExpenses))
+      localStorage.setItem('checkAndPointExpenses', JSON.stringify(updatedExpenses))
 
       setSuccessMessage('¡Gasto registrado exitosamente!')
       
@@ -133,6 +134,7 @@ export default function NewExpensePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">

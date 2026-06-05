@@ -1,12 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Building2, Users, Calendar, DollarSign, Package, TrendingUp, Eye, EyeOff, LogOut, Receipt, Home, Building, BarChart, Settings } from 'lucide-react'
+import { Building2, Users, Calendar, DollarSign, Package, TrendingUp, Eye, EyeOff, LogOut, Receipt, Home, Building, BarChart } from 'lucide-react'
 import Link from 'next/link'
+import ChannelStatusWidget from '@/components/ChannelStatusWidget'
+import Navbar from '@/components/Navbar'
+import { getUserTypeName } from '@/app/users/page'
 
 interface User {
   email: string;
   role: string;
+  name?: string;
   token: string;
 }
 
@@ -31,10 +35,10 @@ export default function DashboardPage() {
   // Obtener estadísticas reales
   const getStats = () => {
     try {
-      const units = JSON.parse(localStorage.getItem('checkAndHomeUnits') || '[]')
-      const bookings = JSON.parse(localStorage.getItem('checkAndHomeBookings') || '[]')
-      const expenses = JSON.parse(localStorage.getItem('checkAndHomeExpenses') || '[]')
-      const inventory = JSON.parse(localStorage.getItem('checkAndHomeInventory') || '[]')
+      const units = JSON.parse(localStorage.getItem('checkAndPointUnits') || '[]')
+      const bookings = JSON.parse(localStorage.getItem('checkAndPointBookings') || '[]')
+      const expenses = JSON.parse(localStorage.getItem('checkAndPointExpenses') || '[]')
+      const inventory = JSON.parse(localStorage.getItem('checkAndPointInventory') || '[]')
       
       const confirmedBookings = bookings.filter((b: any) => b.status === 'CONFIRMED')
       const currentDate = new Date()
@@ -69,8 +73,8 @@ export default function DashboardPage() {
   const stats = isLoggedIn ? getStats() : { totalUnits: 0, activeBookings: 0, monthlyExpenses: 0, lowStockItems: 0 }
   useEffect(() => {
     const checkAuthToken = () => {
-      const storedToken = localStorage.getItem('checkAndHomeToken')
-      const storedUser = localStorage.getItem('checkAndHomeUser')
+      const storedToken = localStorage.getItem('checkAndPointToken')
+      const storedUser = localStorage.getItem('checkAndPointUser')
       
       if (storedToken && storedUser) {
         try {
@@ -84,13 +88,13 @@ export default function DashboardPage() {
             setIsLoggedIn(true)
           } else {
             // Token expirado
-            localStorage.removeItem('checkAndHomeToken')
-            localStorage.removeItem('checkAndHomeUser')
+            localStorage.removeItem('checkAndPointToken')
+            localStorage.removeItem('checkAndPointUser')
           }
         } catch (error) {
           // Token inválido
-          localStorage.removeItem('checkAndHomeToken')
-          localStorage.removeItem('checkAndHomeUser')
+          localStorage.removeItem('checkAndPointToken')
+          localStorage.removeItem('checkAndPointUser')
         }
       }
       setIsCheckingAuth(false)
@@ -121,16 +125,45 @@ export default function DashboardPage() {
     setError('')
 
     try {
-      let userData: Omit<User, 'token'>
-      
-      // Sistema de login demo
-      if (email === 'admin@demo.com' && password === 'password123') {
-        userData = { email, role: 'Administrador' }
-      } else if (email === 'owner@demo.com' && password === 'password123') {
-        userData = { email, role: 'Propietario' }
-      } else if (email === 'guest@demo.com' && password === 'password123') {
-        userData = { email, role: 'Huésped' }
-      } else {
+      let userData: Omit<User, 'token'> | null = null
+      const loginId = email.trim().toLowerCase()
+
+      // 1) Usuarios creados en la sección Usuarios (por email o username)
+      try {
+        type StoredUser = { email?: string; username?: string; name?: string; lastName?: string; password?: string; enabled?: boolean; userType: string }
+        const createdUsers: StoredUser[] = JSON.parse(localStorage.getItem('checkAndPointUsers') || '[]')
+        const match = createdUsers.find((u) =>
+          (u.email?.toLowerCase() === loginId || u.username?.toLowerCase() === loginId) &&
+          u.password === password
+        )
+        if (match) {
+          if (!match.enabled) {
+            setError('El usuario está deshabilitado. Contacta al administrador.')
+            return
+          }
+          const fullName = `${match.name || ''} ${match.lastName || ''}`.trim()
+          userData = {
+            email: match.email || email.trim(),
+            role: getUserTypeName(match.userType),
+            name: fullName || match.username || match.email,
+          }
+        }
+      } catch {
+        // Si falla la lectura, continúa con las cuentas demo
+      }
+
+      // 2) Cuentas demo (fallback)
+      if (!userData) {
+        if (email === 'admin@demo.com' && password === 'password123') {
+          userData = { email, role: 'Administrador' }
+        } else if (email === 'owner@demo.com' && password === 'password123') {
+          userData = { email, role: 'Propietario' }
+        } else if (email === 'guest@demo.com' && password === 'password123') {
+          userData = { email, role: 'Huésped' }
+        }
+      }
+
+      if (!userData) {
         setError('Email o contraseña incorrectos')
         return
       }
@@ -139,8 +172,8 @@ export default function DashboardPage() {
       const token = generateToken(userData)
       const userWithToken = { ...userData, token }
       
-      localStorage.setItem('checkAndHomeToken', token)
-      localStorage.setItem('checkAndHomeUser', JSON.stringify(userData))
+      localStorage.setItem('checkAndPointToken', token)
+      localStorage.setItem('checkAndPointUser', JSON.stringify(userData))
       
       setUser(userWithToken)
       setIsLoggedIn(true)
@@ -150,15 +183,6 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem('checkAndHomeToken')
-    localStorage.removeItem('checkAndHomeUser')
-    setIsLoggedIn(false)
-    setUser(null)
-    setEmail('')
-    setPassword('')
   }
 
   // Mostrar spinner mientras verifica autenticación
@@ -184,13 +208,8 @@ export default function DashboardPage() {
             Iniciar Sesión en Check and Point
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Sistema Demo - Prueba: admin@demo.com / password123
+            Ingresá con tu usuario y contraseña.
           </p>
-          <div className="mt-4 text-center text-sm text-gray-500">
-            <p>Otros usuarios de prueba:</p>
-            <p>• owner@demo.com / password123 (Propietario)</p>
-            <p>• guest@demo.com / password123 (Huésped)</p>
-          </div>
         </div>
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -204,19 +223,19 @@ export default function DashboardPage() {
               
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Correo Electrónico
+                  Usuario o correo electrónico
                 </label>
                 <div className="mt-1">
                   <input
                     id="email"
                     name="email"
-                    type="email"
-                    autoComplete="email"
+                    type="text"
+                    autoComplete="username"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    placeholder="Ingrese su correo"
+                    placeholder="Ingrese su usuario o correo"
                   />
                 </div>
               </div>
@@ -275,35 +294,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Building2 className="h-8 w-8 text-indigo-600" />
-              <h1 className="ml-3 text-2xl font-bold text-gray-900">Panel de Control Check and Point</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">Bienvenido, {user?.role}</span>
-              <nav className="flex space-x-8">
-                <Link href="/" className="text-gray-500 hover:text-gray-700">Inicio</Link>
-                <Link href="/dashboard" className="text-indigo-600 font-medium">Panel</Link>
-                <Link href="/units" className="text-gray-500 hover:text-gray-700">Propiedades</Link>
-                <Link href="/bookings" className="text-gray-500 hover:text-gray-700">Reservas</Link>
-                <Link href="/expenses" className="text-gray-500 hover:text-gray-700">Gastos</Link>
-                <Link href="/inventory" className="text-gray-500 hover:text-gray-700">Inventario</Link>
-              </nav>
-              <button
-                onClick={handleLogout}
-                className="flex items-center text-gray-500 hover:text-gray-700"
-              >
-                <LogOut className="h-4 w-4 mr-1" />
-                Salir
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Navbar title="Panel de Control Check and Point" />
 
       {/* Dashboard Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -395,23 +386,22 @@ export default function DashboardPage() {
                 </div>
               </Link>
 
-              <Link href="/expenses/new" className="flex items-center p-4 bg-yellow-50 rounded-lg hover:bg-yellow-100">
-                <Receipt className="h-8 w-8 text-yellow-600 mr-3" />
+              <Link href="/rates" className="flex items-center p-4 bg-indigo-50 rounded-lg hover:bg-indigo-100">
+                <Calendar className="h-8 w-8 text-indigo-600 mr-3" />
                 <div>
-                  <p className="text-sm font-medium text-yellow-900">Registrar Gasto</p>
-                  <p className="text-sm text-yellow-700">Nuevo gasto o compra</p>
+                  <p className="text-sm font-medium text-indigo-900">Ver Calendario</p>
+                  <p className="text-sm text-indigo-700">Tarifas y disponibilidad</p>
                 </div>
               </Link>
 
-              <Link href="/inventory/new" className="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100">
-                <Package className="h-8 w-8 text-purple-600 mr-3" />
-                <div>
-                  <p className="text-sm font-medium text-purple-900">Agregar Producto</p>
-                  <p className="text-sm text-purple-700">Nuevo item de inventario</p>
-                </div>
-              </Link>
+              {/* Acciones de Gastos y Configuración ocultas (app al ~50%) */}
             </div>
           </div>
+        </div>
+
+        {/* Channel Manager Status */}
+        <div className="mb-8">
+          <ChannelStatusWidget />
         </div>
 
         {/* Recent Bookings */}

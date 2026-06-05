@@ -99,7 +99,7 @@ async function main() {
   // Create sample bookings
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
-  
+
   const nextWeek = new Date()
   nextWeek.setDate(nextWeek.getDate() + 7)
 

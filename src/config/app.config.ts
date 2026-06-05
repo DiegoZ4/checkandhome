@@ -2,7 +2,7 @@
 export const APP_CONFIG = {
   appName: 'Check and Point',
   version: '1.0.0',
-  
+
   // Configuración de canales (Channel Manager)
   channels: {
     airbnb: {
@@ -25,7 +25,7 @@ export const APP_CONFIG = {
       description: 'Reservas creadas directamente en el sistema'
     }
   },
-  
+
   // Configuración de usuarios
   userRoles: {
     ADMIN: {
@@ -49,7 +49,7 @@ export const APP_CONFIG = {
       permissions: ['CHECKIN_GUEST', 'CHECKOUT_GUEST', 'VIEW_BOOKINGS']
     }
   },
-  
+
   // Configuración de amenidades
   amenities: [
     { id: 'wifi', name: 'WiFi', icon: '📶', category: 'connectivity' },
@@ -71,7 +71,7 @@ export const APP_CONFIG = {
     { id: 'elevator', name: 'Ascensor', icon: '🛗', category: 'accessibility' },
     { id: 'wheelchair', name: 'Accesible en Silla de Ruedas', icon: '♿', category: 'accessibility' }
   ],
-  
+
   // Configuración de monedas
   currencies: {
     USD: {
@@ -93,7 +93,7 @@ export const APP_CONFIG = {
       decimals: 2
     }
   },
-  
+
   // Estados de reservas
   bookingStatuses: {
     PENDING: {
@@ -127,7 +127,7 @@ export const APP_CONFIG = {
       description: 'Huésped no se presentó'
     }
   },
-  
+
   // Configuración de integración futura
   integrations: {
     calendar: {
@@ -167,7 +167,7 @@ export const APP_CONFIG = {
       }
     }
   },
-  
+
   // Configuración de notificaciones
   notifications: {
     email: {
@@ -195,7 +195,140 @@ export const STORAGE_KEYS = {
   BOOKINGS: 'checkAndPointBookings',
   EXPENSES: 'checkAndPointExpenses',
   INVENTORY: 'checkAndPointInventory',
-  SETTINGS: 'checkAndPointSettings'
+  SETTINGS: 'checkAndPointSettings',
+  USER_SETTINGS: 'checkAndPointUserSettings',
+  CHANNEL_CONFIG: 'checkAndPointChannelConfig'
+}
+
+// Configuración de APIs externas y Channel Manager
+export const API_ENDPOINTS = {
+  airbnb: {
+    production: 'https://api.airbnb.com/v1',
+    sandbox: 'https://api.airbnb.com/v1/sandbox',
+    auth: '/oauth/token',
+    listings: '/listings',
+    bookings: '/bookings',
+    calendar: '/calendar',
+    pricing: '/pricing'
+  },
+  bookingCom: {
+    production: 'https://distribution-xml.booking.com/json',
+    test: 'https://distribution-xml.booking.com/json/bookings/test',
+    reservations: '/reservations',
+    availability: '/availability',
+    rates: '/rates'
+  }
+}
+
+// Configuración para integraciones de Channel Manager
+export const CHANNEL_MANAGER = {
+  airbnb: {
+    name: 'Airbnb',
+    description: 'Integración con Airbnb para sincronización automática de calendarios, precios y reservas',
+    authType: 'oauth2', // oauth2, api_key
+    requiredFields: ['apiKey', 'clientId', 'clientSecret'],
+    optionalFields: ['webhookUrl'],
+    scopes: [
+      'read:listings',
+      'write:listings',
+      'read:bookings',
+      'write:bookings',
+      'read:calendar',
+      'write:calendar'
+    ],
+    webhookEvents: [
+      'booking.created',
+      'booking.updated',
+      'booking.cancelled',
+      'listing.updated',
+      'calendar.updated'
+    ]
+  },
+  bookingCom: {
+    name: 'Booking.com',
+    description: 'Integración con Booking.com para gestión de disponibilidad y reservas',
+    authType: 'basic', // basic, api_key
+    requiredFields: ['apiKey', 'username', 'password'],
+    optionalFields: ['propertyId'],
+    supportedOperations: [
+      'get_reservations',
+      'update_availability',
+      'update_rates',
+      'confirm_reservation',
+      'cancel_reservation'
+    ]
+  }
+}
+
+// Utilidades para Channel Manager
+export const CHANNEL_UTILS = {
+  // Validar configuración de canal
+  validateChannelConfig: (channel: string, config: Record<string, unknown>): { valid: boolean; errors: string[] } => {
+    const errors: string[] = []
+    const channelConfig = CHANNEL_MANAGER[channel as keyof typeof CHANNEL_MANAGER]
+
+    if (!channelConfig) {
+      errors.push(`Canal no soportado: ${channel}`)
+      return { valid: false, errors }
+    }
+
+    // Validar campos requeridos
+    for (const field of channelConfig.requiredFields) {
+      const value = config[field]
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        errors.push(`Campo requerido faltante: ${field}`)
+      }
+    }
+
+    // Validaciones específicas
+    if (channel === 'airbnb') {
+      const apiKey = config.apiKey as string
+      const clientId = config.clientId as string
+      if (apiKey && apiKey.length < 20) {
+        errors.push('API Key de Airbnb parece ser demasiado corta')
+      }
+      if (clientId && !/^[a-zA-Z0-9_-]+$/.test(clientId)) {
+        errors.push('Client ID de Airbnb contiene caracteres inválidos')
+      }
+    }
+
+    return { valid: errors.length === 0, errors }
+  },
+
+  // Obtener configuración de canal desde localStorage
+  getChannelConfig: (channel: string) => {
+    try {
+      // Verificar si estamos en el navegador
+      if (typeof window === 'undefined') {
+        return {}
+      }
+
+      const config = localStorage.getItem(STORAGE_KEYS.CHANNEL_CONFIG)
+      const allConfigs = config ? JSON.parse(config) : {}
+      return allConfigs[channel] || {}
+    } catch (error) {
+      console.error(`Error loading ${channel} config:`, error)
+      return {}
+    }
+  },
+
+  // Verificar si un canal está habilitado
+  isChannelEnabled: (channel: string): boolean => {
+    try {
+      const config = CHANNEL_UTILS.getChannelConfig(channel)
+      const validation = CHANNEL_UTILS.validateChannelConfig(channel, config)
+      return config.enabled === true && validation.valid
+    } catch (error) {
+      return false
+    }
+  },
+
+  // Obtener canales habilitados
+  getEnabledChannels: (): string[] => {
+    return Object.keys(CHANNEL_MANAGER).filter(channel =>
+      CHANNEL_UTILS.isChannelEnabled(channel)
+    )
+  }
 }
 
 // Utilidades para manejo de fechas

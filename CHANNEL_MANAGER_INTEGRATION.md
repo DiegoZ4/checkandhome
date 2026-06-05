@@ -5,6 +5,7 @@
 ### 1. Airbnb API Integration
 
 #### Datos Requeridos:
+
 ```env
 AIRBNB_CLIENT_ID=your_client_id
 AIRBNB_CLIENT_SECRET=your_client_secret
@@ -20,6 +21,7 @@ AIRBNB_ACCESS_TOKEN=user_access_token
    - Solicitar acceso a Calendar API
 
 2. **OAuth 2.0 Flow**
+
    ```
    Authorization URL: https://www.airbnb.com/oauth/authorize
    Token URL: https://api.airbnb.com/oauth/token
@@ -31,12 +33,14 @@ AIRBNB_ACCESS_TOKEN=user_access_token
    - **Availability**: `PUT /api/v2/calendar/{listing_id}`
 
 #### Funcionalidades:
+
 - ✅ **Calendar Sync**: Importar/exportar disponibilidad
 - ✅ **Reservation Import**: Obtener reservas existentes
 - ✅ **Price Updates**: Actualizar precios
 - ✅ **Availability Blocking**: Bloquear fechas
 
 #### Limitaciones:
+
 - Requiere aprobación de Airbnb para acceso completo
 - Rate limiting: 200 requests/minuto
 - Solo propietarios verificados
@@ -46,6 +50,7 @@ AIRBNB_ACCESS_TOKEN=user_access_token
 ### 2. Booking.com Connectivity API
 
 #### Datos Requeridos:
+
 ```env
 BOOKING_COM_CLIENT_ID=your_client_id
 BOOKING_COM_CLIENT_SECRET=your_client_secret
@@ -62,6 +67,7 @@ BOOKING_COM_ENVIRONMENT=production # or sandbox
    - Obtener certificación
 
 2. **Connectivity API Endpoints**:
+
    ```
    Base URL (Production): https://supply-xml.booking.com/
    Base URL (Sandbox): https://supply-xml.booking.com/hotels/xml/
@@ -74,12 +80,14 @@ BOOKING_COM_ENVIRONMENT=production # or sandbox
    - **Rates**: `POST /hotels/xml/rates`
 
 #### Funcionalidades:
+
 - ✅ **Two-way Calendar Sync**: Sincronización bidireccional
 - ✅ **Real-time Reservations**: Recibir reservas instantáneamente
 - ✅ **Rate Management**: Gestión completa de tarifas
 - ✅ **Property Management**: Gestión completa de propiedades
 
 #### Certificación Requerida:
+
 - **Phase 1**: Basic connectivity (calendar sync)
 - **Phase 2**: Advanced features (rates, restrictions)
 - **Phase 3**: Full certification
@@ -122,17 +130,19 @@ CREATE TABLE external_bookings (
 ### Archivos de Implementación:
 
 1. **Channel Manager Service**
+
    ```typescript
    // src/lib/channel-manager.ts
    export class ChannelManager {
-     async syncCalendar(unitId: string, channel: string)
-     async importBookings(unitId: string, channel: string)
-     async updateAvailability(unitId: string, dates: Date[])
-     async pushRates(unitId: string, rates: RateUpdate[])
+     async syncCalendar(unitId: string, channel: string);
+     async importBookings(unitId: string, channel: string);
+     async updateAvailability(unitId: string, dates: Date[]);
+     async pushRates(unitId: string, rates: RateUpdate[]);
    }
    ```
 
 2. **Webhook Handlers**
+
    ```typescript
    // src/app/api/webhooks/airbnb/route.ts
    // src/app/api/webhooks/booking/route.ts
@@ -141,8 +151,8 @@ CREATE TABLE external_bookings (
 3. **Background Sync Jobs**
    ```typescript
    // src/lib/sync-jobs.ts
-   export async function runDailySync()
-   export async function syncAllChannels()
+   export async function runDailySync();
+   export async function syncAllChannels();
    ```
 
 ### Variables de Entorno Completas:
@@ -162,7 +172,7 @@ AIRBNB_REDIRECT_URI="http://localhost:3000/api/auth/airbnb/callback"
 
 # Booking.com Integration
 BOOKING_COM_CLIENT_ID="your_booking_client_id"
-BOOKING_COM_CLIENT_SECRET="your_booking_client_secret" 
+BOOKING_COM_CLIENT_SECRET="your_booking_client_secret"
 BOOKING_COM_API_KEY="your_booking_api_key"
 BOOKING_COM_ENVIRONMENT="sandbox" # or "production"
 
@@ -180,12 +190,14 @@ CLOUDINARY_API_SECRET="your_api_secret"
 ## Pasos para Activar las Integraciones:
 
 ### Para Airbnb:
+
 1. ✅ Solicitar acceso a Airbnb Partner API
 2. ✅ Implementar OAuth flow
 3. ✅ Configurar webhooks para reservas
 4. ✅ Probar sync de calendario
 
 ### Para Booking.com:
+
 1. ✅ Registrarse en Booking.com Connect
 2. ✅ Completar certificación Phase 1
 3. ✅ Implementar XML API calls
@@ -193,6 +205,7 @@ CLOUDINARY_API_SECRET="your_api_secret"
 5. ✅ Obtener certificación completa
 
 ### Desarrollo Requerido:
+
 - [ ] **OAuth handlers** para ambas plataformas
 - [ ] **Webhook endpoints** para recibir reservas
 - [ ] **Background jobs** para sincronización

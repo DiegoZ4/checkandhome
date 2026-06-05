@@ -1,103 +1,86 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Plus, Filter, Users, MapPin, DollarSign, Clock, Eye, Edit, Trash2 } from 'lucide-react'
+import { Calendar, Plus, Search, Eye, Edit, Trash2, SlidersHorizontal, Users, Minus, Check, X } from 'lucide-react'
 import Link from 'next/link'
-
-interface Booking {
-  id: number
-  unitName: string
-  unitAddress: string
-  checkInDate: string
-  checkOutDate: string
-  guests: number
-  totalPrice: number
-  status: string
-  source: string
-  guest: {
-    firstName: string
-    lastName: string
-    email: string
-    phone: string
-  }
-  createdAt: string
-}
+import Navbar from '@/components/Navbar'
+import {
+  loadReservations,
+  saveReservations,
+  Reservation,
+  getStatusName,
+  getStatusColor,
+  getChannelName,
+  getCurrencyName,
+} from '@/lib/reservations'
 
 export default function BookingsPage() {
-  const [bookings, setBookings] = useState<Booking[]>([])
+  const [reservations, setReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('all')
+
+  // Buscador avanzado
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showPax, setShowPax] = useState(false)
+  const [fProperty, setFProperty] = useState('')
+  const [fCheckIn, setFCheckIn] = useState('')
+  const [fCheckOut, setFCheckOut] = useState('')
+  const [fMayores, setFMayores] = useState(0)
+  const [fMenores, setFMenores] = useState(0)
+  const [fHabitaciones, setFHabitaciones] = useState(0)
+  const [fMascotas, setFMascotas] = useState(false)
+  const [fCochera, setFCochera] = useState(false)
+  const [applied, setApplied] = useState<null | {
+    property: string; checkIn: string; checkOut: string; pax: number; mascotas: boolean; cochera: boolean
+  }>(null)
 
   useEffect(() => {
-    const loadBookings = () => {
-      try {
-        const storedBookings = JSON.parse(localStorage.getItem('checkAndHomeBookings') || '[]')
-        setBookings(storedBookings)
-      } catch (error) {
-        console.error('Error loading bookings:', error)
-        setBookings([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadBookings()
+    setReservations(loadReservations())
+    setLoading(false)
   }, [])
 
-  const deleteBooking = (bookingId: number) => {
+  const deleteReservation = (id: number) => {
     if (confirm('¿Estás seguro de que deseas eliminar esta reserva?')) {
-      const updatedBookings = bookings.filter(booking => booking.id !== bookingId)
-      setBookings(updatedBookings)
-      localStorage.setItem('checkAndHomeBookings', JSON.stringify(updatedBookings))
+      const updated = reservations.filter(r => r.id !== id)
+      setReservations(updated)
+      saveReservations(updated)
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'CONFIRMED': return 'bg-green-100 text-green-800'
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800'
-      case 'CANCELLED': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
+  const formatDate = (dateString: string) =>
+    dateString ? new Date(dateString).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
+
+  const money = (value: number) => (value ? value.toLocaleString('es-AR') : '0')
+
+  const runSearch = () => {
+    setApplied({
+      property: fProperty.trim().toLowerCase(),
+      checkIn: fCheckIn,
+      checkOut: fCheckOut,
+      pax: fMayores + fMenores,
+      mascotas: fMascotas,
+      cochera: fCochera,
+    })
+    setShowPax(false)
   }
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'CONFIRMED': return 'Confirmada'
-      case 'PENDING': return 'Pendiente'
-      case 'CANCELLED': return 'Cancelada'
-      default: return status
-    }
+  const clearSearch = () => {
+    setFProperty(''); setFCheckIn(''); setFCheckOut('')
+    setFMayores(0); setFMenores(0); setFHabitaciones(0)
+    setFMascotas(false); setFCochera(false)
+    setApplied(null)
   }
 
-  const getSourceText = (source: string) => {
-    switch (source) {
-      case 'DIRECT': return 'Directo'
-      case 'AIRBNB': return 'Airbnb'
-      case 'BOOKING': return 'Booking.com'
-      case 'OTHER': return 'Otro'
-      default: return source
-    }
-  }
-
-  const filteredBookings = bookings.filter(booking => {
-    if (activeTab === 'all') return true
-    if (activeTab === 'confirmed') return booking.status === 'CONFIRMED'
-    if (activeTab === 'pending') return booking.status === 'PENDING'
-    if (activeTab === 'completed') {
-      const checkOutDate = new Date(booking.checkOutDate)
-      return checkOutDate < new Date() && booking.status === 'CONFIRMED'
-    }
+  const filtered = reservations.filter(r => {
+    if (!applied) return true
+    if (applied.property && !r.propertyName.toLowerCase().includes(applied.property)) return false
+    if (applied.checkIn && r.checkInDate < applied.checkIn) return false
+    if (applied.checkOut && r.checkOutDate > applied.checkOut) return false
+    // El número de pax debe ser igual o mayor que la búsqueda
+    if (applied.pax > 0 && r.guests < applied.pax) return false
+    if (applied.mascotas && !r.mascotasEnabled) return false
+    if (applied.cochera && !r.cocheraEnabled) return false
     return true
   })
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    })
-  }
 
   if (loading) {
     return (
@@ -109,202 +92,208 @@ export default function BookingsPage() {
       </div>
     )
   }
+
+  const Counter = ({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) => (
+    <div className="flex items-center justify-between border border-gray-200 rounded-md px-3 py-2">
+      <span className="text-sm text-gray-700">{label}</span>
+      <div className="flex items-center space-x-2">
+        <button type="button" onClick={() => onChange(Math.max(0, value - 1))} className="h-6 w-6 inline-flex items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100">
+          <Minus className="h-3 w-3" />
+        </button>
+        <span className="w-6 text-center text-sm">{value}</span>
+        <button type="button" onClick={() => onChange(value + 1)} className="h-6 w-6 inline-flex items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100">
+          <Plus className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  )
+
+  const Toggle = ({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) => (
+    <div className="flex items-center justify-between border border-gray-200 rounded-md px-3 py-2">
+      <span className="text-sm text-gray-700">{label}</span>
+      <button
+        type="button"
+        onClick={() => onChange(!value)}
+        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${value ? 'bg-indigo-600' : 'bg-gray-200'}`}
+      >
+        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${value ? 'translate-x-5' : 'translate-x-0'}`} />
+      </button>
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Calendar className="h-8 w-8 text-indigo-600" />
-              <h1 className="ml-3 text-2xl font-bold text-gray-900">Check and Home - Reservas</h1>
-            </div>
-            <nav className="flex space-x-8">
-              <Link href="/" className="text-gray-500 hover:text-gray-700">Inicio</Link>
-              <Link href="/dashboard" className="text-gray-500 hover:text-gray-700">Panel</Link>
-              <Link href="/units" className="text-gray-500 hover:text-gray-700">Propiedades</Link>
-              <Link href="/bookings" className="text-indigo-600 font-medium">Reservas</Link>
-            </nav>
+      <Navbar title="Reservas - Check and Point" />
+      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <div className="flex items-center">
+            <Calendar className="h-8 w-8 text-indigo-600 mr-3" />
+            <h1 className="text-3xl font-bold text-gray-900">Reservas</h1>
           </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {/* Page Header */}
-        <div className="md:flex md:items-center md:justify-between mb-6">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-              Todas las Reservas
-            </h2>
-          </div>
-          <div className="mt-4 flex space-x-3 md:mt-0 md:ml-4">
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-              <Filter className="h-4 w-4 mr-2" />
-              Filtrar
-            </button>
+          <div className="mt-4 sm:mt-0">
             <Link
               href="/bookings/new"
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Nueva Reserva
+              Agregar Reserva
             </Link>
           </div>
         </div>
 
-        {/* Status Tabs */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex space-x-8">
+        {/* Buscador */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Buscador</label>
+          <div className="flex items-center space-x-2">
+            <div className="relative max-w-md flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                value={fProperty}
+                onChange={(e) => setFProperty(e.target.value)}
+                onFocus={() => setShowAdvanced(true)}
+                className="block w-full pl-10 rounded-full border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black"
+                placeholder="Buscar reserva..."
+              />
+            </div>
             <button
-              onClick={() => setActiveTab('all')}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'all'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              onClick={() => setShowAdvanced(s => !s)}
+              className="inline-flex items-center justify-center h-9 w-9 rounded-md border border-gray-300 text-gray-500 hover:bg-gray-100"
+              title="Búsqueda avanzada"
             >
-              Todas las Reservas ({bookings.length})
+              <SlidersHorizontal className="h-4 w-4" />
             </button>
-            <button
-              onClick={() => setActiveTab('confirmed')}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'confirmed'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Confirmadas ({bookings.filter(b => b.status === 'CONFIRMED').length})
-            </button>
-            <button
-              onClick={() => setActiveTab('pending')}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'pending'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Pendientes ({bookings.filter(b => b.status === 'PENDING').length})
-            </button>
-            <button
-              onClick={() => setActiveTab('completed')}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'completed'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Completadas
-            </button>
-          </nav>
+          </div>
+
+          {/* Buscador avanzado */}
+          {showAdvanced && (
+            <div className="mt-3 inline-flex flex-wrap items-end gap-3 bg-white border border-gray-200 rounded-lg p-3 shadow-sm relative">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Nombre de la propiedad</label>
+                <input type="text" value={fProperty} onChange={(e) => setFProperty(e.target.value)} className="rounded-md border-gray-300 shadow-sm sm:text-sm text-black" placeholder="Propiedad" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Check - in</label>
+                <input type="date" value={fCheckIn} onChange={(e) => setFCheckIn(e.target.value)} className="rounded-md border-gray-300 shadow-sm sm:text-sm text-black" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Check - out</label>
+                <input type="date" value={fCheckOut} onChange={(e) => setFCheckOut(e.target.value)} className="rounded-md border-gray-300 shadow-sm sm:text-sm text-black" />
+              </div>
+              <div className="relative">
+                <label className="block text-xs text-gray-500 mb-1">PAX</label>
+                <button
+                  type="button"
+                  onClick={() => setShowPax(s => !s)}
+                  className="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 sm:text-sm text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  <Users className="h-4 w-4 mr-2 text-gray-400" />
+                  {fMayores + fMenores > 0 ? `${fMayores + fMenores} pax` : 'PAX'}
+                </button>
+
+                {/* Popover PAX (no obligatorio) */}
+                {showPax && (
+                  <div className="absolute z-10 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg p-3 space-y-2">
+                    <Counter label="Mayores" value={fMayores} onChange={setFMayores} />
+                    <Counter label="Menores" value={fMenores} onChange={setFMenores} />
+                    <Counter label="Habitaciones" value={fHabitaciones} onChange={setFHabitaciones} />
+                    <Toggle label="Mascotas" value={fMascotas} onChange={setFMascotas} />
+                    <Toggle label="Cochera" value={fCochera} onChange={setFCochera} />
+                    <p className="text-[11px] text-gray-400 pt-1">No obligatorio</p>
+                  </div>
+                )}
+              </div>
+              <button onClick={runSearch} className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                <Check className="h-4 w-4 mr-1" />
+                Buscar
+              </button>
+              {applied && (
+                <button onClick={clearSearch} className="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100">
+                  <X className="h-4 w-4 mr-1" />
+                  Limpiar
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Bookings List */}
-        {filteredBookings.length === 0 ? (
+        {/* Tabla */}
+        {filtered.length === 0 ? (
           <div className="bg-white shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="text-center py-12">
-                <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No hay reservas</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Comienza agregando propiedades y recibiendo tus primeras reservaciones.
-                </p>
-                <div className="mt-6 space-x-3">
-                  <Link
-                    href="/units/new"
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    Crear Propiedad
-                  </Link>
-                  <Link
-                    href="/bookings/new"
-                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                  >
+            <div className="text-center py-12">
+              <Calendar className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                {reservations.length === 0 ? 'No hay reservas registradas' : 'No se encontraron resultados'}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {reservations.length === 0 ? 'Comienza agregando una nueva reserva.' : 'Prueba con otros criterios de búsqueda.'}
+              </p>
+              {reservations.length === 0 && (
+                <div className="mt-6">
+                  <Link href="/bookings/new" className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
                     <Plus className="h-4 w-4 mr-2" />
-                    Crear Reserva
+                    Agregar Reserva
                   </Link>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         ) : (
           <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="space-y-4">
-                {filteredBookings.map((booking) => (
-                  <div key={booking.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-lg font-medium text-gray-900">{booking.unitName}</h4>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(booking.status)}`}>
-                            {getStatusText(booking.status)}
-                          </span>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    {['ID', 'Estado', 'Propiedad', 'Check-in', 'Check-out', 'Pax', 'Nombre', 'Apellido', 'Teléfono', 'DNI', 'Archivo', 'Moneda', 'Canal', 'Noches', 'Valor noches', 'Mascotas', 'Cochera', 'Cargos', 'Descuentos', 'Total', ''].map((h) => (
+                      <th key={h} className="px-3 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filtered.map((r) => (
+                    <tr key={r.id} className="hover:bg-gray-50 whitespace-nowrap">
+                      <td className="px-3 py-3 text-gray-500">{r.id}</td>
+                      <td className="px-3 py-3">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(r.status)}`}>{getStatusName(r.status)}</span>
+                      </td>
+                      <td className="px-3 py-3 font-medium text-gray-900">{r.propertyName}</td>
+                      <td className="px-3 py-3 text-gray-700">{formatDate(r.checkInDate)}</td>
+                      <td className="px-3 py-3 text-gray-700">{formatDate(r.checkOutDate)}</td>
+                      <td className="px-3 py-3 text-gray-700">{r.guests}</td>
+                      <td className="px-3 py-3 text-gray-700">{r.firstName}</td>
+                      <td className="px-3 py-3 text-gray-700">{r.lastName}</td>
+                      <td className="px-3 py-3 text-gray-700">{r.phone}</td>
+                      <td className="px-3 py-3 text-gray-700">{r.dni}</td>
+                      <td className="px-3 py-3">
+                        <span className={`text-xs font-medium ${r.hasAttachment ? 'text-green-600' : 'text-red-600'}`}>{r.hasAttachment ? 'Sí' : 'No'}</span>
+                      </td>
+                      <td className="px-3 py-3 text-gray-700">{getCurrencyName(r.currency)}</td>
+                      <td className="px-3 py-3 text-gray-700">{getChannelName(r.channel)}</td>
+                      <td className="px-3 py-3 text-gray-700">{r.nights}</td>
+                      <td className="px-3 py-3 text-gray-700">${money(r.valorNoches)}</td>
+                      <td className="px-3 py-3 text-gray-700">{r.mascotasEnabled ? `$${money(r.mascotasValue)}` : '-'}</td>
+                      <td className="px-3 py-3 text-gray-700">{r.cocheraEnabled ? `$${money(r.cocheraValue)}` : '-'}</td>
+                      <td className="px-3 py-3 text-gray-700">${money(r.cargos)}</td>
+                      <td className="px-3 py-3 text-gray-700">{r.descuento ? `${r.descuento}%` : '-'}</td>
+                      <td className="px-3 py-3 font-medium text-gray-900">${money(r.totalBruto)}</td>
+                      <td className="px-3 py-3 text-right">
+                        <div className="flex justify-end space-x-2">
+                          <button className="text-indigo-600 hover:text-indigo-900" onClick={() => alert(`Ver reserva #${r.id} - Próximamente`)} title="Ver"><Eye className="h-4 w-4" /></button>
+                          <button className="text-gray-600 hover:text-gray-900" onClick={() => alert(`Editar reserva #${r.id} - Próximamente`)} title="Editar"><Edit className="h-4 w-4" /></button>
+                          <button className="text-red-600 hover:text-red-900" onClick={() => deleteReservation(r.id)} title="Eliminar"><Trash2 className="h-4 w-4" /></button>
                         </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-                          <div className="space-y-2">
-                            <p className="flex items-center">
-                              <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
-                              {booking.unitAddress}
-                            </p>
-                            <p className="flex items-center">
-                              <Users className="h-4 w-4 mr-2 flex-shrink-0" />
-                              {booking.guest.firstName} {booking.guest.lastName}
-                            </p>
-                            <p className="flex items-center">
-                              <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
-                              {formatDate(booking.checkInDate)} - {formatDate(booking.checkOutDate)}
-                            </p>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <p className="flex items-center">
-                              <DollarSign className="h-4 w-4 mr-2 flex-shrink-0" />
-                              ${booking.totalPrice} USD
-                            </p>
-                            <p className="flex items-center">
-                              <Users className="h-4 w-4 mr-2 flex-shrink-0" />
-                              {booking.guests} huésped{booking.guests !== 1 ? 'es' : ''}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              Canal: {getSourceText(booking.source)} | ID: #{booking.id}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        {/* Acciones */}
-                        <div className="flex justify-end space-x-3 mt-4 pt-3 border-t border-gray-200">
-                          <button 
-                            className="text-indigo-600 hover:text-indigo-900 text-sm font-medium flex items-center"
-                            onClick={() => alert(`Ver detalles de reserva #${booking.id} - Próximamente`)}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Ver Detalles
-                          </button>
-                          <button 
-                            className="text-gray-600 hover:text-gray-900 text-sm font-medium flex items-center"
-                            onClick={() => alert(`Editar reserva #${booking.id} - Próximamente`)}
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Editar
-                          </button>
-                          <button 
-                            onClick={() => deleteBooking(booking.id)}
-                            className="text-red-600 hover:text-red-900 text-sm font-medium flex items-center"
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Eliminar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   )
 }

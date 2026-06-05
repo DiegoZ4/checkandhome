@@ -1,556 +1,432 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Calendar, Users, MapPin, DollarSign, Clock, Building2 } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Calendar, ArrowLeft, Save, Paperclip, User } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-
-interface Unit {
-  id: number
-  name: string
-  address: string
-  pricePerDay: number
-  maxGuests: number
-  checkInTime: string
-  checkOutTime: string
-}
-
-interface Guest {
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  documentType: string
-  documentNumber: string
-}
+import Navbar from '@/components/Navbar'
+import { loadProperties, Property } from '@/lib/properties'
+import {
+  loadReservations,
+  saveReservations,
+  calcNights,
+  roundNice,
+  CURRENCIES,
+  CHANNELS,
+  DOC_TYPES,
+  SENA_OPTIONS,
+  RESERVATION_STATUSES,
+  Reservation,
+} from '@/lib/reservations'
 
 export default function NewBookingPage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [units, setUnits] = useState<Unit[]>([])
-  
-  // Form state
-  const [formData, setFormData] = useState({
-    unitId: '',
-    checkInDate: '',
-    checkOutDate: '',
-    guests: 1,
-    totalPrice: 0,
-    status: 'PENDING',
-    source: 'DIRECT',
-    notes: ''
-  })
+  const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const [successMessage, setSuccessMessage] = useState('')
 
-  const [guestData, setGuestData] = useState<Guest>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    documentType: 'DNI',
-    documentNumber: ''
-  })
+  const [properties, setProperties] = useState<Property[]>([])
+  const [cocheras, setCocheras] = useState<Property[]>([])
 
-  // Cargar unidades disponibles
   useEffect(() => {
-    const storedUnits = JSON.parse(localStorage.getItem('checkAndHomeUnits') || '[]')
-    setUnits(storedUnits)
+    const all = loadProperties().filter(p => !p.eliminado)
+    setProperties(all.filter(p => (p.category || 'alojamiento') === 'alojamiento'))
+    setCocheras(all.filter(p => p.category === 'cochera'))
   }, [])
 
-  // Calcular precio total cuando cambian las fechas o unidad
-  useEffect(() => {
-    if (formData.unitId && formData.checkInDate && formData.checkOutDate) {
-      const selectedUnit = units.find(unit => unit.id === parseInt(formData.unitId))
-      if (selectedUnit) {
-        const checkIn = new Date(formData.checkInDate)
-        const checkOut = new Date(formData.checkOutDate)
-        const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime())
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-        
-        const totalPrice = diffDays * selectedUnit.pricePerDay
-        setFormData(prev => ({ ...prev, totalPrice }))
-      }
-    }
-  }, [formData.unitId, formData.checkInDate, formData.checkOutDate, units])
+  const [data, setData] = useState({
+    propertyId: '',
+    checkInDate: '',
+    checkOutDate: '',
+    checkInTime: '',
+    checkOutTime: '',
+    guests: '1',
+    firstName: '',
+    lastName: '',
+    phone: '',
+    docType: 'DNI',
+    dni: '',
+    currency: 'PESOS',
+    channel: 'DIRECTA',
+    valorNoches: '',
+    mascotasEnabled: false,
+    mascotasQty: '1',
+    cocheraEnabled: false,
+    cocheraId: '',
+    descuento: '',
+    senaPct: '20',
+    status: 'PENDIENTE',
+  })
+  const [hasAttachment, setHasAttachment] = useState(false)
+  const [attachmentName, setAttachmentName] = useState('')
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const selectedProperty = properties.find(p => String(p.id) === data.propertyId)
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    
-    if (name.startsWith('guest.')) {
-      const guestField = name.replace('guest.', '') as keyof Guest
-      setGuestData(prev => ({
-        ...prev,
-        [guestField]: value
-      }))
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: name === 'guests' || name === 'unitId' ? parseInt(value) || value : value
-      }))
+    setData(prev => ({ ...prev, [name]: value }))
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }))
+  }
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setHasAttachment(true)
+      setAttachmentName(file.name)
     }
   }
 
-  const validateDates = () => {
-    if (!formData.checkInDate || !formData.checkOutDate) {
-      setError('Las fechas de check-in y check-out son obligatorias')
-      return false
-    }
+  // ---- Cálculos en vivo ----
+  const num = (v: string) => (v === '' ? 0 : parseFloat(v) || 0)
 
-    const checkIn = new Date(formData.checkInDate)
-    const checkOut = new Date(formData.checkOutDate)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+  const calc = useMemo(() => {
+    const nights = calcNights(data.checkInDate, data.checkOutDate)
+    const valorNoches = num(data.valorNoches)
 
-    if (checkIn < today) {
-      setError('La fecha de check-in no puede ser anterior a hoy')
-      return false
-    }
+    // Cargos de mascotas y cochera tomados de la propiedad seleccionada.
+    const mascotasUnit = selectedProperty ? num(selectedProperty.charges.mascotas) : 0
+    const mascotasValue = data.mascotasEnabled ? mascotasUnit * (parseInt(data.mascotasQty) || 0) : 0
+    const cocheraValue = data.cocheraEnabled && selectedProperty ? num(selectedProperty.charges.cochera) : 0
 
-    if (checkOut <= checkIn) {
-      setError('La fecha de check-out debe ser posterior al check-in')
-      return false
-    }
+    const extras = mascotasValue + cocheraValue
+    const descuentoPct = num(data.descuento)
+    const descuentoAmount = (valorNoches * descuentoPct) / 100
 
-    return true
-  }
+    // Total NETO = valor noches + extras - descuentos
+    const totalNeto = Math.max(0, valorNoches + extras - descuentoAmount)
 
-  const validateGuest = () => {
-    if (!guestData.firstName.trim()) {
-      setError('El nombre del huésped es obligatorio')
-      return false
-    }
-    
-    if (!guestData.lastName.trim()) {
-      setError('El apellido del huésped es obligatorio')
-      return false
-    }
-    
-    if (!guestData.email.trim() || !/\S+@\S+\.\S+/.test(guestData.email)) {
-      setError('Ingrese un email válido')
-      return false
-    }
-    
-    if (!guestData.phone.trim()) {
-      setError('El teléfono es obligatorio')
-      return false
-    }
-    
-    if (!guestData.documentNumber.trim()) {
-      setError('El número de documento es obligatorio')
-      return false
-    }
+    // Cargos (limpieza + servicio) tomados de la propiedad
+    const cargos = selectedProperty
+      ? num(selectedProperty.charges.limpieza) + num(selectedProperty.charges.servicio)
+      : 0
 
-    return true
+    // Total BRUTO = total de la reserva + cargos
+    const totalBruto = totalNeto + cargos
+
+    const senaPct = num(data.senaPct)
+    const senaValue = roundNice((totalBruto * senaPct) / 100) // redondeado
+    const restante = Math.max(0, totalBruto - senaValue)
+
+    return { nights, valorNoches, mascotasValue, cocheraValue, totalNeto, cargos, totalBruto, senaValue, restante }
+  }, [data, selectedProperty])
+
+  const money = (v: number) => v.toLocaleString('es-AR')
+
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {}
+    if (!data.propertyId) newErrors.propertyId = 'Selecciona una propiedad'
+    if (!data.checkInDate) newErrors.checkInDate = 'Fecha de check-in obligatoria'
+    if (!data.checkOutDate) newErrors.checkOutDate = 'Fecha de check-out obligatoria'
+    if (data.checkInDate && data.checkOutDate && calc.nights <= 0) {
+      newErrors.checkOutDate = 'El check-out debe ser posterior al check-in'
+    }
+    if (!data.firstName.trim()) newErrors.firstName = 'Nombre obligatorio'
+    if (!data.lastName.trim()) newErrors.lastName = 'Apellido obligatorio'
+    // La reserva puede crearse sin archivo, pero NO puede ser CONFIRMADA sin él.
+    if (data.status === 'CONFIRMADA' && !hasAttachment) {
+      newErrors.status = 'No se puede CONFIRMAR sin un archivo adjunto'
+    }
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    setError('')
-    setSuccess('')
-
+    if (!validateForm()) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    setLoading(true)
     try {
-      // Validaciones
-      if (!formData.unitId) {
-        setError('Debe seleccionar una propiedad')
-        return
-      }
-
-      if (!validateDates()) return
-      if (!validateGuest()) return
-
-      const selectedUnit = units.find(unit => unit.id === parseInt(formData.unitId.toString()))
-      if (!selectedUnit) {
-        setError('La propiedad seleccionada no es válida')
-        return
-      }
-
-      if (formData.guests > selectedUnit.maxGuests) {
-        setError(`La propiedad seleccionada permite máximo ${selectedUnit.maxGuests} huéspedes`)
-        return
-      }
-
-      // Crear booking
-      const bookingData = {
+      const existing = loadReservations()
+      const newReservation: Reservation = {
         id: Date.now(),
-        ...formData,
-        unitId: parseInt(formData.unitId.toString()),
-        guest: guestData,
-        unitName: selectedUnit.name,
-        unitAddress: selectedUnit.address,
-        checkInTime: selectedUnit.checkInTime,
-        checkOutTime: selectedUnit.checkOutTime,
+        status: data.status as Reservation['status'],
+        propertyId: data.propertyId,
+        propertyName: selectedProperty?.name || '',
+        checkInDate: data.checkInDate,
+        checkOutDate: data.checkOutDate,
+        checkInTime: data.checkInTime,
+        checkOutTime: data.checkOutTime,
+        guests: parseInt(data.guests) || 1,
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        phone: data.phone.trim(),
+        docType: data.docType,
+        dni: data.dni.trim(),
+        hasAttachment,
+        attachmentName,
+        currency: data.currency,
+        channel: data.channel,
+        nights: calc.nights,
+        valorNoches: calc.valorNoches,
+        mascotasEnabled: data.mascotasEnabled,
+        mascotasQty: parseInt(data.mascotasQty) || 0,
+        mascotasValue: calc.mascotasValue,
+        cocheraEnabled: data.cocheraEnabled,
+        cocheraId: data.cocheraId,
+        cocheraValue: calc.cocheraValue,
+        descuento: num(data.descuento),
+        totalNeto: calc.totalNeto,
+        cargos: calc.cargos,
+        totalBruto: calc.totalBruto,
+        senaPct: num(data.senaPct),
+        senaValue: calc.senaValue,
+        restante: calc.restante,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
       }
-
-      // Guardar en localStorage (simular base de datos)
-      const existingBookings = JSON.parse(localStorage.getItem('checkAndHomeBookings') || '[]')
-      existingBookings.push(bookingData)
-      localStorage.setItem('checkAndHomeBookings', JSON.stringify(existingBookings))
-
-      setSuccess(`¡Reserva creada exitosamente! ID: ${bookingData.id}`)
-      
-      // Limpiar formulario después de 2 segundos y redirigir
-      setTimeout(() => {
-        router.push('/bookings')
-      }, 2000)
-      
+      saveReservations([...existing, newReservation])
+      setSuccessMessage('¡Reserva creada exitosamente!')
+      setTimeout(() => router.push('/bookings'), 1500)
     } catch (error) {
-      setError('Error al crear la reserva. Inténtelo nuevamente.')
+      console.error('Error saving reservation:', error)
+      setErrors({ general: 'Ocurrió un error al guardar la reserva. Intenta nuevamente.' })
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  const selectedUnit = units.find(unit => unit.id === parseInt(formData.unitId.toString()))
+  const inputClass = (field?: string) =>
+    `block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black ${
+      field && errors[field] ? 'border-red-300' : ''
+    }`
+
+  const ReadonlyField = ({ label, value }: { label: string; value: string }) => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700">{label}</label>
+      <div className="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 sm:text-sm text-gray-900">{value}</div>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Calendar className="h-8 w-8 text-indigo-600" />
-              <h1 className="ml-3 text-2xl font-bold text-gray-900">Nueva Reserva</h1>
-            </div>
-            <nav className="flex space-x-8">
-              <Link href="/" className="text-gray-500 hover:text-gray-700">Inicio</Link>
-              <Link href="/dashboard" className="text-gray-500 hover:text-gray-700">Panel</Link>
-              <Link href="/units" className="text-gray-500 hover:text-gray-700">Propiedades</Link>
-              <Link href="/bookings" className="text-indigo-600 font-medium">Reservas</Link>
-            </nav>
-          </div>
+      <Navbar title="Reservas - Check and Point" />
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <Link href="/bookings" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 mb-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver a Reservas
+          </Link>
+          <h1 className="text-3xl font-bold text-gray-900">Formulario para crear Reservas</h1>
         </div>
-      </header>
 
-      <main className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="bg-white shadow rounded-lg">
-          <form onSubmit={handleSubmit} className="space-y-6 p-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
-                {error}
+        {successMessage && (
+          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4">
+            <p className="text-sm font-medium text-green-800">{successMessage}</p>
+          </div>
+        )}
+        {errors.general && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
+            <p className="text-sm font-medium text-red-800">{errors.general}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Propiedad y fechas */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+                <Calendar className="h-5 w-5 mr-2" />
+                Datos de la reserva
+              </h3>
+
+              <div className="mb-6">
+                <label htmlFor="propertyId" className="block text-sm font-medium text-gray-700">Seleccionar Propiedad *</label>
+                <select id="propertyId" name="propertyId" value={data.propertyId} onChange={handleChange} className={`mt-1 ${inputClass('propertyId')}`}>
+                  <option value="">Seleccionar Propiedad</option>
+                  {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                {errors.propertyId && <p className="mt-2 text-sm text-red-600">{errors.propertyId}</p>}
+                {properties.length === 0 && (
+                  <p className="mt-2 text-sm text-amber-600">No hay propiedades cargadas. <Link href="/units/new?category=alojamiento" className="underline">Crear una</Link>.</p>
+                )}
               </div>
-            )}
 
-            {success && (
-              <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm">
-                {success}
-              </div>
-            )}
-
-            {/* Selección de Propiedad */}
-            <div>
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Seleccionar Propiedad</h3>
-              
-              {units.length === 0 ? (
-                <div className="text-center p-6 bg-gray-50 rounded-lg">
-                  <Building2 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <p className="text-gray-500 mb-4">No hay propiedades disponibles</p>
-                  <Link
-                    href="/units/new"
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                  >
-                    Crear Primera Propiedad
-                  </Link>
-                </div>
-              ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label htmlFor="unitId" className="block text-sm font-medium text-gray-700 mb-2">
-                    Propiedad *
+                  <label htmlFor="checkInDate" className="block text-sm font-medium text-gray-700">Fecha check-in *</label>
+                  <input type="date" id="checkInDate" name="checkInDate" value={data.checkInDate} onChange={handleChange} className={`mt-1 ${inputClass('checkInDate')}`} />
+                  {errors.checkInDate && <p className="mt-2 text-sm text-red-600">{errors.checkInDate}</p>}
+                </div>
+                <div>
+                  <label htmlFor="checkOutDate" className="block text-sm font-medium text-gray-700">Fecha check-out *</label>
+                  <input type="date" id="checkOutDate" name="checkOutDate" value={data.checkOutDate} onChange={handleChange} className={`mt-1 ${inputClass('checkOutDate')}`} />
+                  {errors.checkOutDate && <p className="mt-2 text-sm text-red-600">{errors.checkOutDate}</p>}
+                </div>
+                <div>
+                  <label htmlFor="guests" className="block text-sm font-medium text-gray-700">Cantidad de huéspedes</label>
+                  <input type="number" min="1" id="guests" name="guests" value={data.guests} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                </div>
+                <div>
+                  <label htmlFor="checkInTime" className="block text-sm font-medium text-gray-700">Horario check-in</label>
+                  <input type="time" id="checkInTime" name="checkInTime" value={data.checkInTime} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                </div>
+                <div>
+                  <label htmlFor="checkOutTime" className="block text-sm font-medium text-gray-700">Horario check-out</label>
+                  <input type="time" id="checkOutTime" name="checkOutTime" value={data.checkOutTime} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Información del huésped */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
+                <User className="h-5 w-5 mr-2" />
+                Información del Huésped
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">Nombre *</label>
+                  <input type="text" id="firstName" name="firstName" value={data.firstName} onChange={handleChange} className={`mt-1 ${inputClass('firstName')}`} />
+                  {errors.firstName && <p className="mt-2 text-sm text-red-600">{errors.firstName}</p>}
+                </div>
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Apellido *</label>
+                  <input type="text" id="lastName" name="lastName" value={data.lastName} onChange={handleChange} className={`mt-1 ${inputClass('lastName')}`} />
+                  {errors.lastName && <p className="mt-2 text-sm text-red-600">{errors.lastName}</p>}
+                </div>
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Teléfono</label>
+                  <input type="tel" id="phone" name="phone" value={data.phone} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                </div>
+                <div>
+                  <label htmlFor="docType" className="block text-sm font-medium text-gray-700">Tipo de Documento</label>
+                  <select id="docType" name="docType" value={data.docType} onChange={handleChange} className={`mt-1 ${inputClass()}`}>
+                    {DOC_TYPES.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="dni" className="block text-sm font-medium text-gray-700">DNI</label>
+                  <input type="text" id="dni" name="dni" value={data.dni} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                </div>
+                <div className="flex items-end">
+                  <label className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer w-full justify-center">
+                    <Paperclip className="h-4 w-4 mr-2" />
+                    + Agregar archivo
+                    <input type="file" className="hidden" onChange={handleFile} />
                   </label>
-                  <select
-                    name="unitId"
-                    id="unitId"
-                    required
-                    value={formData.unitId}
-                    onChange={handleInputChange}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    <option value="">Seleccionar propiedad</option>
-                    {units.map((unit) => (
-                      <option key={unit.id} value={unit.id}>
-                        {unit.name} - ${unit.pricePerDay}/día (Máx. {unit.maxGuests} huéspedes)
+                </div>
+              </div>
+              {hasAttachment && (
+                <p className="mt-3 text-sm text-green-600">Archivo adjunto: {attachmentName}</p>
+              )}
+              <p className="mt-2 text-xs text-gray-500">Se puede crear la reserva sin archivo, pero el estado NO puede ser CONFIRMADO.</p>
+            </div>
+          </div>
+
+          {/* Valor de la reserva */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-6">Valor Reserva</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div>
+                  <label htmlFor="currency" className="block text-sm font-medium text-gray-700">Tipo de Moneda</label>
+                  <select id="currency" name="currency" value={data.currency} onChange={handleChange} className={`mt-1 ${inputClass()}`}>
+                    {CURRENCIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="channel" className="block text-sm font-medium text-gray-700">Canal de Reserva</label>
+                  <select id="channel" name="channel" value={data.channel} onChange={handleChange} className={`mt-1 ${inputClass()}`}>
+                    {CHANNELS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <ReadonlyField label="Cantidad de noches" value={String(calc.nights)} />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="valorNoches" className="block text-sm font-medium text-gray-700">Valor noches</label>
+                  <input type="number" min="0" step="0.01" id="valorNoches" name="valorNoches" value={data.valorNoches} onChange={handleChange} className={`mt-1 ${inputClass()}`} placeholder="0" />
+                  <p className="mt-1 text-xs text-gray-500">Sumatoria del valor de cada noche de la reserva.</p>
+                </div>
+
+                {/* Mascotas */}
+                <div className="flex items-end gap-3">
+                  <div className="flex items-center pb-2">
+                    <button type="button" onClick={() => setData(prev => ({ ...prev, mascotasEnabled: !prev.mascotasEnabled }))}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${data.mascotasEnabled ? 'bg-indigo-600' : 'bg-gray-200'}`}>
+                      <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${data.mascotasEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                    <span className="ml-3 text-sm text-gray-700">Mascotas</span>
+                  </div>
+                  {data.mascotasEnabled && (
+                    <div className="flex-1">
+                      <label htmlFor="mascotasQty" className="block text-xs text-gray-500">Cantidad</label>
+                      <input type="number" min="1" id="mascotasQty" name="mascotasQty" value={data.mascotasQty} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Cochera */}
+                <div className="flex items-end gap-3">
+                  <div className="flex items-center pb-2">
+                    <button type="button" onClick={() => setData(prev => ({ ...prev, cocheraEnabled: !prev.cocheraEnabled }))}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${data.cocheraEnabled ? 'bg-indigo-600' : 'bg-gray-200'}`}>
+                      <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${data.cocheraEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                    <span className="ml-3 text-sm text-gray-700">Cochera</span>
+                  </div>
+                  {data.cocheraEnabled && (
+                    <div className="flex-1">
+                      <label htmlFor="cocheraId" className="block text-xs text-gray-500">Cochera</label>
+                      <select id="cocheraId" name="cocheraId" value={data.cocheraId} onChange={handleChange} className={`mt-1 ${inputClass()}`}>
+                        <option value="">Cocheras</option>
+                        {cocheras.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="descuento" className="block text-sm font-medium text-gray-700">Descuentos (%)</label>
+                  <input type="number" min="0" max="100" id="descuento" name="descuento" value={data.descuento} onChange={handleChange} className={`mt-1 ${inputClass()}`} placeholder="porcentaje" />
+                </div>
+              </div>
+
+              {/* Totales calculados */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 border-t border-gray-100 pt-6">
+                <ReadonlyField label="Total NETO" value={`$${money(calc.totalNeto)}`} />
+                <ReadonlyField label="Cargos (limpieza + servicio)" value={`$${money(calc.cargos)}`} />
+                <ReadonlyField label="Total BRUTO" value={`$${money(calc.totalBruto)}`} />
+                <div>
+                  <label htmlFor="senaPct" className="block text-sm font-medium text-gray-700">Seña</label>
+                  <select id="senaPct" name="senaPct" value={data.senaPct} onChange={handleChange} className={`mt-1 ${inputClass()}`}>
+                    {SENA_OPTIONS.map(s => <option key={s} value={s}>{s}%</option>)}
+                  </select>
+                </div>
+                <ReadonlyField label="Valor de la seña (redondeado)" value={`$${money(calc.senaValue)}`} />
+                <ReadonlyField label="Restante" value={`$${money(calc.restante)}`} />
+                <div>
+                  <label htmlFor="status" className="block text-sm font-medium text-gray-700">Estado de la reserva</label>
+                  <select id="status" name="status" value={data.status} onChange={handleChange} className={`mt-1 ${inputClass('status')}`}>
+                    {RESERVATION_STATUSES.map(s => (
+                      <option key={s.id} value={s.id} disabled={s.id === 'CONFIRMADA' && !hasAttachment}>
+                        {s.name}{s.id === 'CONFIRMADA' && !hasAttachment ? ' (requiere archivo)' : ''}
                       </option>
                     ))}
                   </select>
-                  
-                  {selectedUnit && (
-                    <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        {selectedUnit.address}
-                      </div>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-sm text-gray-600 flex items-center">
-                          <Clock className="h-4 w-4 mr-1" />
-                          Check-in: {selectedUnit.checkInTime} | Check-out: {selectedUnit.checkOutTime}
-                        </span>
-                        <span className="text-sm font-medium text-indigo-600 flex items-center">
-                          <DollarSign className="h-4 w-4 mr-1" />
-                          ${selectedUnit.pricePerDay}/día
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                  {errors.status && <p className="mt-2 text-sm text-red-600">{errors.status}</p>}
                 </div>
-              )}
+              </div>
             </div>
+          </div>
 
-            {units.length > 0 && (
-              <>
-                {/* Fechas y Huéspedes */}
-                <div>
-                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Detalles de la Reserva</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <label htmlFor="checkInDate" className="block text-sm font-medium text-gray-700">
-                        Fecha Check-in *
-                      </label>
-                      <input
-                        type="date"
-                        name="checkInDate"
-                        id="checkInDate"
-                        required
-                        value={formData.checkInDate}
-                        onChange={handleInputChange}
-                        min={new Date().toISOString().split('T')[0]}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="checkOutDate" className="block text-sm font-medium text-gray-700">
-                        Fecha Check-out *
-                      </label>
-                      <input
-                        type="date"
-                        name="checkOutDate"
-                        id="checkOutDate"
-                        required
-                        value={formData.checkOutDate}
-                        onChange={handleInputChange}
-                        min={formData.checkInDate || new Date().toISOString().split('T')[0]}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="guests" className="block text-sm font-medium text-gray-700">
-                        Número de Huéspedes *
-                      </label>
-                      <select
-                        name="guests"
-                        id="guests"
-                        required
-                        value={formData.guests}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      >
-                        {Array.from({ length: selectedUnit?.maxGuests || 10 }, (_, i) => i + 1).map(num => (
-                          <option key={num} value={num}>{num} {num === 1 ? 'huésped' : 'huéspedes'}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {formData.totalPrice > 0 && (
-                    <div className="mt-4 p-4 bg-green-50 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-medium text-gray-900">Precio Total:</span>
-                        <span className="text-2xl font-bold text-green-600">${formData.totalPrice} USD</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Información del Huésped */}
-                <div>
-                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Información del Huésped Principal</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label htmlFor="guest.firstName" className="block text-sm font-medium text-gray-700">
-                        Nombre *
-                      </label>
-                      <input
-                        type="text"
-                        name="guest.firstName"
-                        id="guest.firstName"
-                        required
-                        value={guestData.firstName}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="Juan"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="guest.lastName" className="block text-sm font-medium text-gray-700">
-                        Apellido *
-                      </label>
-                      <input
-                        type="text"
-                        name="guest.lastName"
-                        id="guest.lastName"
-                        required
-                        value={guestData.lastName}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="Pérez"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="guest.email" className="block text-sm font-medium text-gray-700">
-                        Email *
-                      </label>
-                      <input
-                        type="email"
-                        name="guest.email"
-                        id="guest.email"
-                        required
-                        value={guestData.email}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="juan@example.com"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="guest.phone" className="block text-sm font-medium text-gray-700">
-                        Teléfono *
-                      </label>
-                      <input
-                        type="tel"
-                        name="guest.phone"
-                        id="guest.phone"
-                        required
-                        value={guestData.phone}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="+54 11 1234-5678"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="guest.documentType" className="block text-sm font-medium text-gray-700">
-                        Tipo de Documento
-                      </label>
-                      <select
-                        name="guest.documentType"
-                        id="guest.documentType"
-                        value={guestData.documentType}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      >
-                        <option value="DNI">DNI</option>
-                        <option value="PASAPORTE">Pasaporte</option>
-                        <option value="CEDULA">Cédula</option>
-                        <option value="OTRO">Otro</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label htmlFor="guest.documentNumber" className="block text-sm font-medium text-gray-700">
-                        Número de Documento *
-                      </label>
-                      <input
-                        type="text"
-                        name="guest.documentNumber"
-                        id="guest.documentNumber"
-                        required
-                        value={guestData.documentNumber}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="12345678"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Configuración Adicional */}
-                <div>
-                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Configuración Adicional</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-                        Estado de la Reserva
-                      </label>
-                      <select
-                        name="status"
-                        id="status"
-                        value={formData.status}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      >
-                        <option value="PENDING">Pendiente</option>
-                        <option value="CONFIRMED">Confirmada</option>
-                        <option value="CANCELLED">Cancelada</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label htmlFor="source" className="block text-sm font-medium text-gray-700">
-                        Canal de Reserva
-                      </label>
-                      <select
-                        name="source"
-                        id="source"
-                        value={formData.source}
-                        onChange={handleInputChange}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      >
-                        <option value="DIRECT">Directo</option>
-                        <option value="AIRBNB">Airbnb</option>
-                        <option value="BOOKING">Booking.com</option>
-                        <option value="OTHER">Otro</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Notas */}
-                <div>
-                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-                    Notas Adicionales
-                  </label>
-                  <textarea
-                    name="notes"
-                    id="notes"
-                    rows={3}
-                    value={formData.notes}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="Solicitudes especiales, instrucciones de llegada, etc..."
-                  />
-                </div>
-
-                {/* Botones */}
-                <div className="flex justify-end space-x-4 pt-6">
-                  <Link
-                    href="/bookings"
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancelar
-                  </Link>
-                  <button
-                    type="submit"
-                    disabled={isLoading || units.length === 0}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isLoading ? 'Creando...' : 'Crear Reserva'}
-                  </button>
-                </div>
-              </>
-            )}
-          </form>
-        </div>
-      </main>
+          {/* Botones */}
+          <div className="flex justify-end space-x-3">
+            <Link href="/bookings" className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700">
+              Cancelar
+            </Link>
+            <button type="submit" disabled={loading} className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" /> : <Save className="h-5 w-5 mr-2" />}
+              {loading ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

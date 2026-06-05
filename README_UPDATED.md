@@ -5,6 +5,7 @@ Un sistema completo de gestión de reservas y propiedades con integración de ch
 ## 🚀 Características Principales
 
 ### ✅ **COMPLETADO - Sistema Base**
+
 - **Autenticación completa** con localStorage y tokens JWT simulados
 - **Dashboard interactivo** con estadísticas en tiempo real
 - **Sistema multi-usuario** (Admin, Owner, Guest, Cleaner, CheckInOut)
@@ -12,6 +13,7 @@ Un sistema completo de gestión de reservas y propiedades con integración de ch
 - **Responsive design** para móviles y tablets
 
 ### ✅ **COMPLETADO - Gestión de Propiedades**
+
 - **Crear propiedades** con información completa:
   - Nombre, dirección, descripción
   - Precios diarios en USD
@@ -22,6 +24,7 @@ Un sistema completo de gestión de reservas y propiedades con integración de ch
 - **Validación completa** de formularios
 
 ### ✅ **COMPLETADO - Sistema de Reservas**
+
 - **Crear reservas** con:
   - Selección de propiedad
   - Fechas de check-in/check-out
@@ -33,6 +36,7 @@ Un sistema completo de gestión de reservas y propiedades con integración de ch
 - **Validación de fechas** y disponibilidad
 
 ### ✅ **COMPLETADO - Gestión Financiera**
+
 - **Sistema de gastos/compras**:
   - Registro de gastos con descripción y monto
   - Categorización (Mantenimiento, Suministros, etc.)
@@ -43,6 +47,7 @@ Un sistema completo de gestión de reservas y propiedades con integración de ch
 - **Reportes financieros** básicos
 
 ### ✅ **COMPLETADO - Sistema de Inventario**
+
 - **Gestión completa de stock**:
   - Productos con stock actual, mínimo y máximo
   - Categorización por tipo de producto
@@ -53,6 +58,7 @@ Un sistema completo de gestión de reservas y propiedades con integración de ch
 - **Dashboard de inventario** con estadísticas
 
 ### ✅ **COMPLETADO - Funcionalidades Técnicas**
+
 - **Persistencia de datos** con localStorage (para demo)
 - **Validación de formularios** en tiempo real
 - **Mensajes de éxito/error** informativos
@@ -94,21 +100,25 @@ src/
 ## 🚀 Instalación y Uso
 
 ### 1. Instalación
+
 ```bash
 npm install
 ```
 
 ### 2. Ejecutar en desarrollo
+
 ```bash
 npm run dev
 ```
 
 ### 3. Abrir en navegador
+
 ```
 http://localhost:3000
 ```
 
 ### 4. Login de Prueba
+
 - **Email**: admin@checkandhome.com
 - **Contraseña**: admin123
 - **Rol**: Administrador
@@ -116,30 +126,35 @@ http://localhost:3000
 ## 📊 Funcionalidades por Pantalla
 
 ### 🏠 **Dashboard Principal**
+
 - Estadísticas en tiempo real
 - Acciones rápidas para crear contenido
 - Alertas de stock bajo
 - Resumen financiero mensual
 
 ### 🏢 **Gestión de Propiedades (/units)**
+
 - Lista de propiedades con filtros
 - Formulario completo de creación
 - Edición y eliminación
 - Galería de fotos y amenidades
 
 ### 📅 **Sistema de Reservas (/bookings)**
+
 - Calendario de reservas
 - Formulario de nueva reserva
 - Estados de reserva
 - Información completa de huéspedes
 
 ### 💰 **Gastos y Compras (/expenses)**
+
 - Registro de gastos categorizados
 - Filtros por categoría y fecha
 - Reportes mensuales
 - Adjunto de recibos
 
 ### 📦 **Inventario y Stock (/inventory)**
+
 - Gestión de productos por categoría
 - Alertas de stock bajo
 - Control de proveedores
@@ -148,21 +163,25 @@ http://localhost:3000
 ## 🔮 **PRÓXIMAS INTEGRACIONES** (Preparado para implementar)
 
 ### 📡 **Channel Manager**
+
 - **Airbnb API**: Sincronización de calendarios y reservas
 - **Booking.com API**: Gestión automática de disponibilidad
 - **Webhook endpoints** configurados para recibir reservas
 
 ### 💳 **Sistemas de Pago**
+
 - **Stripe**: Procesar pagos de huéspedes
 - **PayPal**: Método de pago alternativo
 - **Reportes financieros** automáticos
 
 ### 📧 **Notificaciones**
+
 - **Email automation**: Confirmaciones y recordatorios
 - **WhatsApp Business**: Mensajes automáticos
 - **SMS**: Notificaciones de check-in/out
 
 ### 📱 **Integraciones Adicionales**
+
 - **Google Calendar**: Sincronización de eventos
 - **Smart locks**: Check-in automático
 - **Cleaning services**: Programación automática
@@ -170,6 +189,7 @@ http://localhost:3000
 ## 🗄️ **Estructura de Datos**
 
 ### Propiedades (Units)
+
 ```typescript
 {
   id: number
@@ -186,22 +206,24 @@ http://localhost:3000
 ```
 
 ### Reservas (Bookings)
+
 ```typescript
 {
-  id: number
-  unitName: string
-  checkInDate: string
-  checkOutDate: string
-  guests: number
-  totalPrice: number
-  status: "PENDING" | "CONFIRMED" | "CANCELLED"
-  source: "DIRECT" | "AIRBNB" | "BOOKING"
-  guest: GuestInfo
-  createdAt: string
+  id: number;
+  unitName: string;
+  checkInDate: string;
+  checkOutDate: string;
+  guests: number;
+  totalPrice: number;
+  status: "PENDING" | "CONFIRMED" | "CANCELLED";
+  source: "DIRECT" | "AIRBNB" | "BOOKING";
+  guest: GuestInfo;
+  createdAt: string;
 }
 ```
 
 ### Gastos (Expenses)
+
 ```typescript
 {
   id: number
@@ -216,6 +238,7 @@ http://localhost:3000
 ```
 
 ### Inventario (Inventory)
+
 ```typescript
 {
   id: number
@@ -236,6 +259,7 @@ http://localhost:3000
 ## 🔐 **Seguridad y Roles**
 
 ### Roles de Usuario Implementados:
+
 - **ADMIN**: Acceso completo al sistema
 - **OWNER**: Gestión de propiedades y finanzas
 - **GUEST**: Acceso limitado a sus reservas
@@ -243,6 +267,7 @@ http://localhost:3000
 - **CHECKINOUT**: Gestión de check-in/out
 
 ### Seguridad:
+
 - Tokens JWT simulados con expiración
 - Validación de sesión automática
 - Logout automático por expiración
@@ -251,6 +276,7 @@ http://localhost:3000
 ## 🔄 **Estado del Proyecto**
 
 ### ✅ **COMPLETADO (100%)**
+
 1. **Sistema base de autenticación**
 2. **Gestión completa de propiedades**
 3. **Sistema de reservas funcional**
@@ -263,6 +289,7 @@ http://localhost:3000
 10. **Navegación y UX optimizada**
 
 ### 🔄 **LISTO PARA INTEGRAR**
+
 1. **APIs de Airbnb y Booking.com**
 2. **Sistemas de pago (Stripe/PayPal)**
 3. **Notificaciones automáticas**
@@ -272,7 +299,7 @@ http://localhost:3000
 ## 📝 **Notas Técnicas**
 
 - **Datos de demostración**: Almacenados en localStorage
-- **Validación**: Cliente-side con feedback en tiempo real  
+- **Validación**: Cliente-side con feedback en tiempo real
 - **Responsive**: Optimizado para móviles y tablets
 - **Performance**: Componentes optimizados con TypeScript
 - **SEO Ready**: Estructura preparada para Next.js SSR

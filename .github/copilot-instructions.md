@@ -3,6 +3,7 @@
 This is a complete booking management system with multi-user roles, property management, and channel manager integration.
 
 ### Project Features:
+
 - Multi-user system (Admin, Guest, Owner, Cleaner, CheckInOut roles)
 - Property management (units with name, address, calendar, daily pricing in USD, photos, amenities)
 - Amenities system with name and logo
@@ -14,6 +15,7 @@ This is a complete booking management system with multi-user roles, property man
 - Dashboard for different user roles
 
 ### Database Schema:
+
 - Users table with role-based access
 - Properties (units) with full details
 - Amenities with logos
@@ -22,11 +24,13 @@ This is a complete booking management system with multi-user roles, property man
 - Inventory and consumption tracking
 
 ### API Integrations:
+
 - Booking.com API for calendar sync
 - Airbnb API for reservation management
 - Channel manager functionality
 
 ### Development Status:
+
 - [x] Verify copilot-instructions.md file creation
 - [x] Clarify project requirements
 - [x] Scaffold Next.js booking system project
@@ -38,6 +42,7 @@ This is a complete booking management system with multi-user roles, property man
 - [x] Complete documentation
 
 ### Getting Started:
+
 1. Run `npm run dev` to start development server
 2. Visit http://localhost:3000 to see the application
 3. Database is set up with SQLite and Prisma

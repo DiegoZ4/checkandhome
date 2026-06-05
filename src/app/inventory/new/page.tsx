@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Package, DollarSign, Hash, MapPin, ArrowLeft, Save, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import Navbar from '@/components/Navbar'
 
 export default function NewInventoryPage() {
   const [loading, setLoading] = useState(false)
@@ -114,7 +115,7 @@ export default function NewInventoryPage() {
 
     try {
       // Obtener inventario existente
-      const existingInventory = JSON.parse(localStorage.getItem('checkAndHomeInventory') || '[]')
+      const existingInventory = JSON.parse(localStorage.getItem('checkAndPointInventory') || '[]')
       
       // Crear nuevo producto
       const newItem = {
@@ -134,7 +135,7 @@ export default function NewInventoryPage() {
 
       // Guardar en localStorage
       const updatedInventory = [...existingInventory, newItem]
-      localStorage.setItem('checkAndHomeInventory', JSON.stringify(updatedInventory))
+      localStorage.setItem('checkAndPointInventory', JSON.stringify(updatedInventory))
 
       setSuccessMessage('¡Producto agregado al inventario exitosamente!')
       
@@ -153,6 +154,7 @@ export default function NewInventoryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">

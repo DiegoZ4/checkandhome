@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Package, Plus, Filter, TrendingDown, TrendingUp, AlertTriangle, Eye, Edit, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import Navbar from '@/components/Navbar'
 
 interface InventoryItem {
   id: number
@@ -37,7 +38,7 @@ export default function InventoryPage() {
   useEffect(() => {
     const loadInventory = () => {
       try {
-        const storedInventory = JSON.parse(localStorage.getItem('checkAndHomeInventory') || '[]')
+        const storedInventory = JSON.parse(localStorage.getItem('checkAndPointInventory') || '[]')
         setInventory(storedInventory)
       } catch (error) {
         console.error('Error loading inventory:', error)
@@ -54,7 +55,7 @@ export default function InventoryPage() {
     if (confirm('¿Estás seguro de que deseas eliminar este producto del inventario?')) {
       const updatedInventory = inventory.filter(item => item.id !== itemId)
       setInventory(updatedInventory)
-      localStorage.setItem('checkAndHomeInventory', JSON.stringify(updatedInventory))
+      localStorage.setItem('checkAndPointInventory', JSON.stringify(updatedInventory))
     }
   }
 
@@ -132,6 +133,7 @@ export default function InventoryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">

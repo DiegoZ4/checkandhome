@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Receipt, Plus, Filter, DollarSign, Calendar, Tag, Edit, Trash2, Eye } from 'lucide-react'
 import Link from 'next/link'
-
+import Navbar from '@/components/Navbar'
 interface Expense {
   id: number
   description: string
@@ -32,7 +32,7 @@ export default function ExpensesPage() {
   useEffect(() => {
     const loadExpenses = () => {
       try {
-        const storedExpenses = JSON.parse(localStorage.getItem('checkAndHomeExpenses') || '[]')
+        const storedExpenses = JSON.parse(localStorage.getItem('checkAndPointExpenses') || '[]')
         setExpenses(storedExpenses)
       } catch (error) {
         console.error('Error loading expenses:', error)
@@ -49,7 +49,7 @@ export default function ExpensesPage() {
     if (confirm('¿Estás seguro de que deseas eliminar este gasto?')) {
       const updatedExpenses = expenses.filter(expense => expense.id !== expenseId)
       setExpenses(updatedExpenses)
-      localStorage.setItem('checkAndHomeExpenses', JSON.stringify(updatedExpenses))
+      localStorage.setItem('checkAndPointExpenses', JSON.stringify(updatedExpenses))
     }
   }
 
@@ -102,6 +102,8 @@ export default function ExpensesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar title="Gastos - Check and Point" />
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">

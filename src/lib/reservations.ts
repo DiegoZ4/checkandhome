@@ -23,8 +23,13 @@ export const CHANNELS = [
   { id: 'DIRECTA', name: 'Directa' },
   { id: 'BOOKING', name: 'Booking' },
   { id: 'AIRBNB', name: 'Airbnb' },
-  { id: 'CANCELADO_BOOKING', name: 'Cancelado Booking' },
-  { id: 'NO_SHOW_BOOKING', name: 'No show Booking' },
+] as const
+
+// Condición de la reserva — solo aplica cuando el canal es Booking
+export const BOOKING_CONDITIONS = [
+  { id: 'PRESENTADO', name: 'Presentado' },
+  { id: 'CANCELADO', name: 'Cancelado' },
+  { id: 'NO_SHOW', name: 'No show' },
 ] as const
 
 export const DOC_TYPES = [
@@ -58,9 +63,14 @@ export interface Reservation {
   hasAttachment: boolean
   attachmentName: string
 
+  hasPaymentProof: boolean
+  paymentProofName: string
+  observaciones: string
+
   // Valor de la reserva
   currency: string
   channel: string
+  condition: string
   nights: number
   valorNoches: number
 
@@ -121,6 +131,10 @@ export function getStatusName(id: string) {
 
 export function getChannelName(id: string) {
   return CHANNELS.find(c => c.id === id)?.name || id
+}
+
+export function getConditionName(id: string) {
+  return BOOKING_CONDITIONS.find(c => c.id === id)?.name || id
 }
 
 export function getCurrencyName(id: string) {

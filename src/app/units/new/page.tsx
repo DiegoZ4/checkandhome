@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { Home, ArrowLeft, Save, Image as ImageIcon, X } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -12,6 +12,7 @@ import {
   PROPERTY_TYPES,
   AMENITIES,
   BED_TYPES,
+  CURRENCIES,
   Property,
   PropertyCategory,
   BedConfig,
@@ -21,6 +22,7 @@ function AlojamientoForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const category = (searchParams.get('category') as PropertyCategory) || 'alojamiento'
+  const editIdParam = searchParams.get('id')
 
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
@@ -38,11 +40,14 @@ function AlojamientoForm() {
     bathrooms: '',
     maxGuests: '',
     propertyType: '',
+    ambientes: '',
     checkInFrom: '',
     checkInTo: '',
     checkOutFrom: '',
     checkOutTo: '',
     mtsDelMar: '',
+    mascotasCantidad: '',
+    chargesCurrency: 'USD',
     charges: {
       limpieza: '',
       servicio: '',
@@ -81,6 +86,53 @@ function AlojamientoForm() {
 
   const [photos, setPhotos] = useState<string[]>([])
 
+  // Modo edición: si hay ?id=, precargamos los datos de la propiedad existente.
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingCreatedAt, setEditingCreatedAt] = useState('')
+
+  useEffect(() => {
+    if (!editIdParam) return
+    const found = loadProperties().find(p => p.id === Number(editIdParam))
+    if (!found) return
+
+    setEditingId(found.id)
+    setEditingCreatedAt(found.createdAt)
+    setData({
+      name: found.name,
+      zona: found.zona,
+      address: found.address,
+      number: found.number,
+      floor: found.floor,
+      apartment: found.apartment,
+      description: found.description,
+      bedrooms: found.bedrooms,
+      bathrooms: found.bathrooms,
+      maxGuests: found.maxGuests,
+      propertyType: found.propertyType,
+      ambientes: found.ambientes,
+      checkInFrom: found.checkInFrom,
+      checkInTo: found.checkInTo,
+      checkOutFrom: found.checkOutFrom,
+      checkOutTo: found.checkOutTo,
+      mtsDelMar: found.mtsDelMar,
+      mascotasCantidad: found.mascotasCantidad,
+      chargesCurrency: found.chargesCurrency,
+      charges: found.charges,
+      wifiNetwork: found.wifiNetwork,
+      wifiPassword: found.wifiPassword,
+      keysCount: found.keysCount,
+      electronicKey: found.electronicKey,
+      keyCode: found.keyCode,
+      bookingId: found.bookingId,
+      airbnbId: found.airbnbId,
+      bank: found.bank,
+      enabled: found.enabled,
+    })
+    setBeds(prev => ({ ...prev, ...found.beds }))
+    setAmenities(prev => ({ ...prev, ...found.amenities }))
+    setPhotos(found.photos)
+  }, [editIdParam])
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setData(prev => ({ ...prev, [name]: value }))
@@ -108,6 +160,9 @@ function AlojamientoForm() {
 
   const toggleAmenity = (id: string) => {
     setAmenities(prev => ({ ...prev, [id]: !prev[id] }))
+    if (id === 'jovenes' && amenities.jovenes) {
+      setData(prev => ({ ...prev, charges: { ...prev.charges, depositoJoven: '' } }))
+    }
   }
 
   const handlePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,7 +222,7 @@ function AlojamientoForm() {
       const existing = loadProperties()
 
       const newProperty: Property = {
-        id: Date.now(),
+        id: editingId ?? Date.now(),
         category,
         name: data.name.trim(),
         zona: data.zona,
@@ -180,6 +235,7 @@ function AlojamientoForm() {
         bathrooms: data.bathrooms,
         maxGuests: data.maxGuests,
         propertyType: data.propertyType,
+        ambientes: data.ambientes,
         checkInFrom: data.checkInFrom,
         checkInTo: data.checkInTo,
         checkOutFrom: data.checkOutFrom,
@@ -187,6 +243,8 @@ function AlojamientoForm() {
         beds,
         amenities,
         mtsDelMar: data.mtsDelMar,
+        mascotasCantidad: data.mascotasCantidad,
+        chargesCurrency: data.chargesCurrency,
         charges: data.charges,
         wifiNetwork: data.wifiNetwork.trim(),
         wifiPassword: data.wifiPassword,
@@ -206,12 +264,17 @@ function AlojamientoForm() {
         photos,
         enabled: data.enabled,
         eliminado: false,
-        createdAt: new Date().toISOString(),
+        createdAt: editingId ? editingCreatedAt : new Date().toISOString(),
         deletedAt: null,
       }
 
-      saveProperties([...existing, newProperty])
-      setSuccessMessage('¡Propiedad creada exitosamente!')
+      if (editingId) {
+        saveProperties(existing.map(p => (p.id === editingId ? newProperty : p)))
+        setSuccessMessage('¡Propiedad actualizada exitosamente!')
+      } else {
+        saveProperties([...existing, newProperty])
+        setSuccessMessage('¡Propiedad creada exitosamente!')
+      }
       setTimeout(() => router.push(`/units/list?category=${category}`), 1500)
     } catch (error) {
       console.error('Error saving property:', error)
@@ -239,7 +302,9 @@ function AlojamientoForm() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Formulario para crear Propiedades</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {editingId ? 'Editar Propiedad' : 'Formulario para crear Propiedades'}
+          </h1>
           <p className="mt-1 text-sm text-gray-500">
             Completa los datos de la propiedad ({category === 'cochera' ? 'Cochera' : 'Alojamiento'})
           </p>
@@ -333,6 +398,10 @@ function AlojamientoForm() {
                     <option value="">Tipo de propiedad</option>
                     {PROPERTY_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
+                </div>
+                <div>
+                  <label htmlFor="ambientes" className="block text-sm font-medium text-gray-700">Ambientes</label>
+                  <input type="number" min="0" id="ambientes" name="ambientes" value={data.ambientes} onChange={handleChange} className={`mt-1 ${inputClass()}`} placeholder="0" />
                 </div>
               </div>
             </div>
@@ -431,9 +500,17 @@ function AlojamientoForm() {
                   </button>
                 ))}
               </div>
-              <div className="mt-6 max-w-xs">
-                <label htmlFor="mtsDelMar" className="block text-sm font-medium text-gray-700">Mts del mar</label>
-                <input type="number" min="0" id="mtsDelMar" name="mtsDelMar" value={data.mtsDelMar} onChange={handleChange} className={`mt-1 ${inputClass()}`} placeholder="0" />
+              <div className="mt-6 flex flex-wrap gap-6">
+                {amenities.mascotas && (
+                  <div className="max-w-xs">
+                    <label htmlFor="mascotasCantidad" className="block text-sm font-medium text-gray-700">Cantidad de mascotas</label>
+                    <input type="number" min="0" id="mascotasCantidad" name="mascotasCantidad" value={data.mascotasCantidad} onChange={handleChange} className={`mt-1 ${inputClass()}`} placeholder="0" />
+                  </div>
+                )}
+                <div className="max-w-xs">
+                  <label htmlFor="mtsDelMar" className="block text-sm font-medium text-gray-700">Mts del mar</label>
+                  <input type="number" min="0" id="mtsDelMar" name="mtsDelMar" value={data.mtsDelMar} onChange={handleChange} className={`mt-1 ${inputClass()}`} placeholder="0" />
+                </div>
               </div>
             </div>
           </div>
@@ -441,17 +518,25 @@ function AlojamientoForm() {
           {/* Cargos */}
           <div className="bg-white shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Cargos</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-medium text-gray-900">Cargos</h3>
+                <div className="w-40">
+                  <label htmlFor="chargesCurrency" className="sr-only">Tipo de moneda</label>
+                  <select id="chargesCurrency" name="chargesCurrency" value={data.chargesCurrency} onChange={handleChange} className={inputClass()}>
+                    {CURRENCIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              </div>
               <p className="text-xs text-gray-500 mb-6">Limpieza, Servicio y Depósito son obligatorios. Mascotas, Cochera y Depósito joven solo si la comodidad está seleccionada.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[
-                  { key: 'limpieza', label: 'Limpieza *' },
-                  { key: 'servicio', label: 'Servicio *' },
-                  { key: 'mascotas', label: `Mascotas${amenities.mascotas ? ' *' : ''}` },
-                  { key: 'cochera', label: `Cochera${amenities.cochera ? ' *' : ''}` },
-                  { key: 'deposito', label: 'Depósito *' },
-                  { key: 'depositoJoven', label: `Depósito joven${amenities.jovenes ? ' *' : ''}` },
-                ].map(({ key, label }) => (
+                  { key: 'limpieza', label: 'Limpieza *', disabled: false },
+                  { key: 'servicio', label: 'Servicio *', disabled: false },
+                  { key: 'mascotas', label: `Mascotas${amenities.mascotas ? ' *' : ''}`, disabled: false },
+                  { key: 'cochera', label: `Cochera${amenities.cochera ? ' *' : ''}`, disabled: false },
+                  { key: 'deposito', label: 'Depósito *', disabled: false },
+                  { key: 'depositoJoven', label: `Depósito joven${amenities.jovenes ? ' *' : ''}`, disabled: !amenities.jovenes },
+                ].map(({ key, label, disabled }) => (
                   <div key={key}>
                     <label htmlFor={key} className="block text-sm font-medium text-gray-700">{label}</label>
                     <input
@@ -462,8 +547,9 @@ function AlojamientoForm() {
                       name={key}
                       value={data.charges[key as keyof typeof data.charges]}
                       onChange={handleChargeChange}
-                      className={`mt-1 ${inputClass(`charge_${key}`)}`}
-                      placeholder="0.00"
+                      disabled={disabled}
+                      className={`mt-1 ${inputClass(`charge_${key}`)} disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                      placeholder={disabled ? 'Selecciona "Jóvenes" en Comodidades' : '0.00'}
                     />
                     {errors[`charge_${key}`] && <p className="mt-2 text-sm text-red-600">{errors[`charge_${key}`]}</p>}
                   </div>
@@ -624,7 +710,7 @@ function AlojamientoForm() {
               ) : (
                 <Save className="h-5 w-5 mr-2" />
               )}
-              {loading ? 'Guardando...' : 'Guardar'}
+              {loading ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Guardar'}
             </button>
           </div>
         </form>
@@ -691,6 +777,7 @@ function CocheraForm() {
         bathrooms: '',
         maxGuests: '',
         propertyType: '',
+        ambientes: '',
         checkInFrom: '',
         checkInTo: '',
         checkOutFrom: '',
@@ -698,6 +785,8 @@ function CocheraForm() {
         beds: {},
         amenities: {},
         mtsDelMar: '',
+        mascotasCantidad: '',
+        chargesCurrency: 'USD',
         charges: { limpieza: '', servicio: '', mascotas: '', cochera: '', deposito: '', depositoJoven: '' },
         wifiNetwork: '',
         wifiPassword: '',

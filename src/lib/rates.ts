@@ -13,12 +13,26 @@ export interface RateEntry {
 // propertyId -> 'YYYY-MM-DD' -> RateEntry
 export type RatesMap = Record<string, Record<string, RateEntry>>
 
+export interface ProximityDiscount {
+  days: string
+  percent: string
+}
+
 export interface RatePlan {
   id: string
   name: string
   description: string
   hasMinNights: boolean
   minNights: number
+  hasPerDayPricing: boolean
+  perDayPrices: Record<string, string>
+  priceVariation: string
+  priceVariationType: 'aumento' | 'reduccion'
+  hasStayDiscount: boolean
+  stayDiscountDuration: string
+  stayDiscountPercent: string
+  proximityDiscounts: ProximityDiscount[]
+  weekendSurcharge: string
   createdAt: string
 }
 

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { Suspense, useState, useEffect, useMemo } from 'react'
 import { Calendar, ArrowLeft, Save, Paperclip, User } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import { loadProperties, Property } from '@/lib/properties'
 import {
@@ -13,14 +13,17 @@ import {
   roundNice,
   CURRENCIES,
   CHANNELS,
+  BOOKING_CONDITIONS,
   DOC_TYPES,
   SENA_OPTIONS,
   RESERVATION_STATUSES,
   Reservation,
 } from '@/lib/reservations'
 
-export default function NewBookingPage() {
+function BookingForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const editIdParam = searchParams.get('id')
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [successMessage, setSuccessMessage] = useState('')
@@ -48,6 +51,7 @@ export default function NewBookingPage() {
     dni: '',
     currency: 'PESOS',
     channel: 'DIRECTA',
+    condition: '',
     valorNoches: '',
     mascotasEnabled: false,
     mascotasQty: '1',
@@ -56,15 +60,64 @@ export default function NewBookingPage() {
     descuento: '',
     senaPct: '20',
     status: 'PENDIENTE',
+    observaciones: '',
   })
   const [hasAttachment, setHasAttachment] = useState(false)
   const [attachmentName, setAttachmentName] = useState('')
+  const [hasPaymentProof, setHasPaymentProof] = useState(false)
+  const [paymentProofName, setPaymentProofName] = useState('')
+
+  // Modo edición: si hay ?id=, precargamos los datos de la reserva existente.
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingCreatedAt, setEditingCreatedAt] = useState('')
+
+  useEffect(() => {
+    if (!editIdParam) return
+    const found = loadReservations().find(r => r.id === Number(editIdParam))
+    if (!found) return
+
+    setEditingId(found.id)
+    setEditingCreatedAt(found.createdAt)
+    setData({
+      propertyId: found.propertyId,
+      checkInDate: found.checkInDate,
+      checkOutDate: found.checkOutDate,
+      checkInTime: found.checkInTime,
+      checkOutTime: found.checkOutTime,
+      guests: String(found.guests),
+      firstName: found.firstName,
+      lastName: found.lastName,
+      phone: found.phone,
+      docType: found.docType,
+      dni: found.dni,
+      currency: found.currency,
+      channel: found.channel,
+      condition: found.condition,
+      valorNoches: String(found.valorNoches),
+      mascotasEnabled: found.mascotasEnabled,
+      mascotasQty: String(found.mascotasQty),
+      cocheraEnabled: found.cocheraEnabled,
+      cocheraId: found.cocheraId,
+      descuento: String(found.descuento),
+      senaPct: String(found.senaPct),
+      status: found.status,
+      observaciones: found.observaciones,
+    })
+    setHasAttachment(found.hasAttachment)
+    setAttachmentName(found.attachmentName)
+    setHasPaymentProof(found.hasPaymentProof)
+    setPaymentProofName(found.paymentProofName)
+  }, [editIdParam])
 
   const selectedProperty = properties.find(p => String(p.id) === data.propertyId)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setData(prev => ({ ...prev, [name]: value }))
+    setData(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'channel' && value !== 'BOOKING' ? { condition: '' } : {}),
+    }))
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }))
   }
 
@@ -73,6 +126,14 @@ export default function NewBookingPage() {
     if (file) {
       setHasAttachment(true)
       setAttachmentName(file.name)
+    }
+  }
+
+  const handlePaymentProofFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setHasPaymentProof(true)
+      setPaymentProofName(file.name)
     }
   }
 
@@ -140,7 +201,7 @@ export default function NewBookingPage() {
     try {
       const existing = loadReservations()
       const newReservation: Reservation = {
-        id: Date.now(),
+        id: editingId ?? Date.now(),
         status: data.status as Reservation['status'],
         propertyId: data.propertyId,
         propertyName: selectedProperty?.name || '',
@@ -156,8 +217,12 @@ export default function NewBookingPage() {
         dni: data.dni.trim(),
         hasAttachment,
         attachmentName,
+        hasPaymentProof,
+        paymentProofName,
+        observaciones: data.observaciones.trim(),
         currency: data.currency,
         channel: data.channel,
+        condition: data.channel === 'BOOKING' ? data.condition : '',
         nights: calc.nights,
         valorNoches: calc.valorNoches,
         mascotasEnabled: data.mascotasEnabled,
@@ -173,10 +238,15 @@ export default function NewBookingPage() {
         senaPct: num(data.senaPct),
         senaValue: calc.senaValue,
         restante: calc.restante,
-        createdAt: new Date().toISOString(),
+        createdAt: editingId ? editingCreatedAt : new Date().toISOString(),
       }
-      saveReservations([...existing, newReservation])
-      setSuccessMessage('¡Reserva creada exitosamente!')
+      if (editingId) {
+        saveReservations(existing.map(r => (r.id === editingId ? newReservation : r)))
+        setSuccessMessage('¡Reserva actualizada exitosamente!')
+      } else {
+        saveReservations([...existing, newReservation])
+        setSuccessMessage('¡Reserva creada exitosamente!')
+      }
       setTimeout(() => router.push('/bookings'), 1500)
     } catch (error) {
       console.error('Error saving reservation:', error)
@@ -207,7 +277,9 @@ export default function NewBookingPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver a Reservas
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Formulario para crear Reservas</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {editingId ? 'Editar Reserva' : 'Formulario para crear Reservas'}
+          </h1>
         </div>
 
         {successMessage && (
@@ -321,7 +393,7 @@ export default function NewBookingPage() {
             <div className="px-4 py-5 sm:p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-6">Valor Reserva</h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                 <div>
                   <label htmlFor="currency" className="block text-sm font-medium text-gray-700">Tipo de Moneda</label>
                   <select id="currency" name="currency" value={data.currency} onChange={handleChange} className={`mt-1 ${inputClass()}`}>
@@ -334,6 +406,15 @@ export default function NewBookingPage() {
                     {CHANNELS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
+                {data.channel === 'BOOKING' && (
+                  <div>
+                    <label htmlFor="condition" className="block text-sm font-medium text-gray-700">Condición</label>
+                    <select id="condition" name="condition" value={data.condition} onChange={handleChange} className={`mt-1 ${inputClass()}`}>
+                      <option value="">Tipo</option>
+                      {BOOKING_CONDITIONS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                )}
                 <ReadonlyField label="Cantidad de noches" value={String(calc.nights)} />
               </div>
 
@@ -415,6 +496,28 @@ export default function NewBookingPage() {
             </div>
           </div>
 
+          {/* Comprobante de pago / Observaciones */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700">Comprobante de pago</label>
+                <label className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer">
+                  <Paperclip className="h-4 w-4 mr-2" />
+                  + Agregar archivo
+                  <input type="file" className="hidden" onChange={handlePaymentProofFile} />
+                </label>
+              </div>
+              {hasPaymentProof && (
+                <p className="mt-3 text-sm text-green-600">Archivo adjunto: {paymentProofName}</p>
+              )}
+
+              <div className="mt-6">
+                <label htmlFor="observaciones" className="block text-sm font-medium text-gray-700">Observaciones / Notas</label>
+                <textarea id="observaciones" name="observaciones" rows={4} value={data.observaciones} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+              </div>
+            </div>
+          </div>
+
           {/* Botones */}
           <div className="flex justify-end space-x-3">
             <Link href="/bookings" className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700">
@@ -422,11 +525,19 @@ export default function NewBookingPage() {
             </Link>
             <button type="submit" disabled={loading} className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" /> : <Save className="h-5 w-5 mr-2" />}
-              {loading ? 'Guardando...' : 'Guardar'}
+              {loading ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Guardar'}
             </button>
           </div>
         </form>
       </div>
     </div>
+  )
+}
+
+export default function NewBookingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <BookingForm />
+    </Suspense>
   )
 }

@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code
+CLAUDE.md
+.claude/
+
+# Archivos descargados / materiales externos
+download*
+prompts-exactos*

@@ -1,6 +1,6 @@
 'use client'
 
-import { Home } from 'lucide-react'
+import { Home, Car } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 
@@ -22,7 +22,7 @@ export default function PropertiesHomePage() {
 
         {/* Cards */}
         <div className="bg-white shadow rounded-lg p-8">
-          <div className="grid grid-cols-1 gap-6 max-w-md mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
             <Link
               href="/units/list?category=alojamiento"
               className="flex flex-col items-center justify-center border-2 border-gray-200 rounded-lg p-10 hover:border-indigo-500 hover:bg-indigo-50 transition-colors group"
@@ -33,7 +33,6 @@ export default function PropertiesHomePage() {
               </span>
             </Link>
 
-            {/* Cocheras oculto (app al ~50%)
             <Link
               href="/units/list?category=cochera"
               className="flex flex-col items-center justify-center border-2 border-gray-200 rounded-lg p-10 hover:border-indigo-500 hover:bg-indigo-50 transition-colors group"
@@ -43,7 +42,6 @@ export default function PropertiesHomePage() {
                 Cocheras
               </span>
             </Link>
-            */}
           </div>
         </div>
       </div>

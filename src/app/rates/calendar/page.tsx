@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Search, X, Save } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
@@ -28,6 +28,7 @@ export default function RatesCalendarPage() {
   const [rates, setRates] = useState<RatesMap>({})
   const [plans, setPlans] = useState<RatePlan[]>([])
   const [search, setSearch] = useState('')
+  const [planFilter, setPlanFilter] = useState('')
 
   // Inicio de la ventana visible
   const [startDate, setStartDate] = useState<Date>(() => new Date())
@@ -83,8 +84,13 @@ export default function RatesCalendarPage() {
     setPPlans(prev => (prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]))
   }
 
+  // Guarda de reentrancia sincrónica: evita que un doble clic dispare dos escrituras
+  // antes de que React desmonte el panel (el estado `panel` se actualiza async).
+  const savingPanelRef = useRef(false)
+
   const savePanel = () => {
-    if (!panel) return
+    if (!panel || savingPanelRef.current) return
+    savingPanelRef.current = true
     // Construir el rango de fechas (inclusive)
     const from = new Date(panel.from)
     const to = new Date(panel.to)
@@ -102,6 +108,7 @@ export default function RatesCalendarPage() {
     setRates(updated)
     saveRates(updated)
     closePanel()
+    savingPanelRef.current = false
   }
 
   const headerMonth = `${MONTH_NAMES[startDate.getMonth()]} de ${startDate.getFullYear()}`
@@ -145,6 +152,14 @@ export default function RatesCalendarPage() {
           <button onClick={goToday} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
             HOY
           </button>
+          <select
+            value={planFilter}
+            onChange={(e) => setPlanFilter(e.target.value)}
+            className="rounded-md border-gray-300 shadow-sm sm:text-sm text-black"
+          >
+            <option value="">Todos los planes de tarifa</option>
+            {plans.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
+          </select>
         </div>
 
         <div className="flex gap-4">
@@ -209,13 +224,14 @@ export default function RatesCalendarPage() {
                         {days.map(d => {
                           const entry = getEntry(rates, String(p.id), dateKey(d))
                           const blocked = entry && !entry.available
+                          const matchesPlan = !planFilter || (entry ? entry.planIds.includes(planFilter) : false)
                           return (
                             <td
                               key={dateKey(d)}
                               onClick={() => openPanel(p, d)}
                               className={`w-24 min-w-24 border-r border-gray-100 px-1 py-3 text-center text-xs cursor-pointer hover:bg-indigo-50 ${
                                 blocked ? 'bg-red-50' : ''
-                              }`}
+                              } ${!matchesPlan ? 'opacity-30' : ''}`}
                               title="Editar precio / disponibilidad"
                             >
                               {blocked ? (

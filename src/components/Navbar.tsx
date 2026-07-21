@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import {
-  Menu, X, LogOut, Home, Users, Calendar, CalendarRange, Building2, BarChart3,
+  Menu, X, LogOut, Home, Users, Calendar, CalendarRange, Building2, BarChart3, DollarSign,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -27,7 +27,7 @@ const MENU_ITEMS = [
   { label: 'Usuarios', href: '/users', icon: Users },
   { label: 'Reservas', href: '/bookings', icon: Calendar },
   { label: 'Tarifas y Disponibilidad', href: '/rates', icon: CalendarRange },
-  // { label: 'Planes de tarifa', href: '/rates/plans', icon: DollarSign },
+  { label: 'Planes de tarifa', href: '/rates/plans', icon: DollarSign },
   { label: 'Propiedades', href: '/units', icon: Building2 },
   // { label: 'Cocheras', href: '/units/list?category=cochera', icon: Car },
   // { label: 'Administración', href: '/expenses', icon: Receipt },

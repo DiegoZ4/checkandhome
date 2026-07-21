@@ -1,17 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { Users, User, Mail, Phone, Lock, ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import { USER_TYPES } from '../page'
 
-export default function NewUserPage() {
+function NewUserForm() {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [successMessage, setSuccessMessage] = useState('')
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const editIdParam = searchParams.get('id')
 
   const [userData, setUserData] = useState({
     userType: '',
@@ -24,6 +26,35 @@ export default function NewUserPage() {
     confirmPassword: '',
     enabled: true
   })
+
+  // Modo edición: si hay ?id=, precargamos los datos del usuario existente.
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingCreatedAt, setEditingCreatedAt] = useState('')
+
+  useEffect(() => {
+    if (!editIdParam) return
+    try {
+      const existingUsers = JSON.parse(localStorage.getItem('checkAndPointUsers') || '[]')
+      const found = existingUsers.find((u: { id: number }) => u.id === Number(editIdParam))
+      if (!found) return
+
+      setEditingId(found.id)
+      setEditingCreatedAt(found.createdAt)
+      setUserData({
+        userType: found.userType,
+        name: found.name,
+        lastName: found.lastName,
+        username: found.username,
+        phone: found.phone,
+        email: found.email,
+        password: found.password,
+        confirmPassword: found.password,
+        enabled: found.enabled,
+      })
+    } catch (error) {
+      console.error('Error loading user to edit:', error)
+    }
+  }, [editIdParam])
 
   const selectedType = USER_TYPES.find(t => t.id === userData.userType)
 
@@ -93,15 +124,17 @@ export default function NewUserPage() {
     try {
       const existingUsers = JSON.parse(localStorage.getItem('checkAndPointUsers') || '[]')
 
-      // Validar email único
-      if (existingUsers.some((u: { email: string }) => u.email.toLowerCase() === userData.email.toLowerCase())) {
+      // Validar email único (ignorando al propio usuario cuando se está editando)
+      if (existingUsers.some((u: { id: number; email: string }) =>
+        u.id !== editingId && u.email.toLowerCase() === userData.email.toLowerCase()
+      )) {
         setErrors({ email: 'Ya existe un usuario con este email' })
         setLoading(false)
         return
       }
 
-      const newUser = {
-        id: Date.now(),
+      const userRecord = {
+        id: editingId ?? Date.now(),
         userType: userData.userType,
         name: userData.name.trim(),
         lastName: userData.lastName.trim(),
@@ -110,13 +143,15 @@ export default function NewUserPage() {
         email: userData.email.trim(),
         password: userData.password, // Nota: demo; en producción debe hashearse en el backend
         enabled: userData.enabled,
-        createdAt: new Date().toISOString()
+        createdAt: editingId ? editingCreatedAt : new Date().toISOString()
       }
 
-      const updatedUsers = [...existingUsers, newUser]
+      const updatedUsers = editingId
+        ? existingUsers.map((u: { id: number }) => (u.id === editingId ? userRecord : u))
+        : [...existingUsers, userRecord]
       localStorage.setItem('checkAndPointUsers', JSON.stringify(updatedUsers))
 
-      setSuccessMessage('¡Usuario creado exitosamente!')
+      setSuccessMessage(editingId ? '¡Usuario actualizado exitosamente!' : '¡Usuario creado exitosamente!')
 
       setTimeout(() => {
         router.push('/users')
@@ -143,9 +178,11 @@ export default function NewUserPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver a Usuarios
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Formulario para crear Usuarios</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {editingId ? 'Editar Usuario' : 'Formulario para crear Usuarios'}
+          </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Completa los datos para registrar un nuevo usuario en el sistema
+            {editingId ? 'Actualiza los datos del usuario' : 'Completa los datos para registrar un nuevo usuario en el sistema'}
           </p>
         </div>
 
@@ -443,11 +480,19 @@ export default function NewUserPage() {
               ) : (
                 <Save className="h-5 w-5 mr-2" />
               )}
-              {loading ? 'Guardando...' : 'Guardar'}
+              {loading ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Guardar'}
             </button>
           </div>
         </form>
       </div>
     </div>
+  )
+}
+
+export default function NewUserPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <NewUserForm />
+    </Suspense>
   )
 }

@@ -11,6 +11,7 @@ import {
   getStatusName,
   getStatusColor,
   getChannelName,
+  getConditionName,
   getCurrencyName,
 } from '@/lib/reservations'
 
@@ -247,7 +248,8 @@ export default function BookingsPage() {
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-100">
                   <tr>
-                    {['ID', 'Estado', 'Propiedad', 'Check-in', 'Check-out', 'Pax', 'Nombre', 'Apellido', 'Teléfono', 'DNI', 'Archivo', 'Moneda', 'Canal', 'Noches', 'Valor noches', 'Mascotas', 'Cochera', 'Cargos', 'Descuentos', 'Total', ''].map((h) => (
+                    <th className="sticky left-0 z-10 bg-gray-100 px-3 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">Acciones</th>
+                    {['ID', 'Estado', 'Propiedad', 'Check-in', 'Check-out', 'Pax', 'Nombre', 'Apellido', 'Teléfono', 'DNI', 'Archivo', 'Moneda', 'Canal', 'Noches', 'Valor noches', 'Mascotas', 'Cochera', 'Cargos', 'Descuentos', 'Total'].map((h) => (
                       <th key={h} className="px-3 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -255,6 +257,13 @@ export default function BookingsPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filtered.map((r) => (
                     <tr key={r.id} className="hover:bg-gray-50 whitespace-nowrap">
+                      <td className="sticky left-0 z-10 bg-white px-3 py-3">
+                        <div className="flex space-x-2">
+                          <Link href={`/bookings/${r.id}`} className="text-indigo-600 hover:text-indigo-900" title="Ver"><Eye className="h-4 w-4" /></Link>
+                          <Link href={`/bookings/new?id=${r.id}`} className="text-gray-600 hover:text-gray-900" title="Editar"><Edit className="h-4 w-4" /></Link>
+                          <button className="text-red-600 hover:text-red-900" onClick={() => deleteReservation(r.id)} title="Eliminar"><Trash2 className="h-4 w-4" /></button>
+                        </div>
+                      </td>
                       <td className="px-3 py-3 text-gray-500">{r.id}</td>
                       <td className="px-3 py-3">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(r.status)}`}>{getStatusName(r.status)}</span>
@@ -271,7 +280,10 @@ export default function BookingsPage() {
                         <span className={`text-xs font-medium ${r.hasAttachment ? 'text-green-600' : 'text-red-600'}`}>{r.hasAttachment ? 'Sí' : 'No'}</span>
                       </td>
                       <td className="px-3 py-3 text-gray-700">{getCurrencyName(r.currency)}</td>
-                      <td className="px-3 py-3 text-gray-700">{getChannelName(r.channel)}</td>
+                      <td className="px-3 py-3 text-gray-700">
+                        {getChannelName(r.channel)}
+                        {r.condition && ` (${getConditionName(r.condition)})`}
+                      </td>
                       <td className="px-3 py-3 text-gray-700">{r.nights}</td>
                       <td className="px-3 py-3 text-gray-700">${money(r.valorNoches)}</td>
                       <td className="px-3 py-3 text-gray-700">{r.mascotasEnabled ? `$${money(r.mascotasValue)}` : '-'}</td>
@@ -279,13 +291,6 @@ export default function BookingsPage() {
                       <td className="px-3 py-3 text-gray-700">${money(r.cargos)}</td>
                       <td className="px-3 py-3 text-gray-700">{r.descuento ? `${r.descuento}%` : '-'}</td>
                       <td className="px-3 py-3 font-medium text-gray-900">${money(r.totalBruto)}</td>
-                      <td className="px-3 py-3 text-right">
-                        <div className="flex justify-end space-x-2">
-                          <button className="text-indigo-600 hover:text-indigo-900" onClick={() => alert(`Ver reserva #${r.id} - Próximamente`)} title="Ver"><Eye className="h-4 w-4" /></button>
-                          <button className="text-gray-600 hover:text-gray-900" onClick={() => alert(`Editar reserva #${r.id} - Próximamente`)} title="Editar"><Edit className="h-4 w-4" /></button>
-                          <button className="text-red-600 hover:text-red-900" onClick={() => deleteReservation(r.id)} title="Eliminar"><Trash2 className="h-4 w-4" /></button>
-                        </div>
-                      </td>
                     </tr>
                   ))}
                 </tbody>

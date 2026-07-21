@@ -20,18 +20,28 @@ export const PROPERTY_TYPES = [
   { id: 'casa', name: 'Casa' },
 ] as const
 
+// Tipo de moneda para los cargos de la propiedad
+export const CURRENCIES = [
+  { id: 'USD', name: 'USD' },
+  { id: 'ARS', name: 'ARS' },
+] as const
+
 // Comodidades disponibles. `chargeKey` indica qué cargo se vuelve obligatorio
 // cuando la comodidad está seleccionada (ver wireframe de Cargos).
 export const AMENITIES = [
-  { id: 'mascotas', name: 'Mascotas', chargeKey: 'mascotas' },
+  { id: 'terrazaBalcon', name: 'Terraza/Balcón' },
   { id: 'calefaccion', name: 'Calefacción' },
   { id: 'parrilla', name: 'Parrilla' },
-  { id: 'terrazaBalcon', name: 'Terraza/Balcón' },
+  { id: 'wifi', name: 'WIFI' },
+  { id: 'vistaAlMar', name: 'Vista al mar' },
   { id: 'lavarropas', name: 'Lavarropas' },
   { id: 'cochera', name: 'Cochera', chargeKey: 'cochera' },
-  { id: 'vistaAlMar', name: 'Vista al mar' },
+  { id: 'tv', name: 'TV' },
+  { id: 'ascensores', name: 'Ascensores' },
   { id: 'aireAcondicionado', name: 'Aire Acondicionado' },
   { id: 'jovenes', name: 'Jóvenes', chargeKey: 'depositoJoven' },
+  { id: 'cocina', name: 'Cocina' },
+  { id: 'mascotas', name: 'Mascotas', chargeKey: 'mascotas' },
 ] as const
 
 export const BED_TYPES = [
@@ -62,6 +72,7 @@ export interface Property {
   bathrooms: string
   maxGuests: string
   propertyType: string
+  ambientes: string
 
   // Horarios
   checkInFrom: string
@@ -75,8 +86,10 @@ export interface Property {
   // Comodidades (id -> seleccionado)
   amenities: Record<string, boolean>
   mtsDelMar: string
+  mascotasCantidad: string
 
   // Cargos
+  chargesCurrency: string
   charges: {
     limpieza: string
     servicio: string

@@ -230,20 +230,12 @@ export default function UsersPage() {
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(user.createdAt)}</td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-3">
-                          <button
-                            className="text-indigo-600 hover:text-indigo-900"
-                            onClick={() => alert(`Ver detalles de ${user.username} - Próximamente`)}
-                            title="Ver"
-                          >
+                          <Link href={`/users/${user.id}`} className="text-indigo-600 hover:text-indigo-900" title="Ver">
                             <Eye className="h-4 w-4" />
-                          </button>
-                          <button
-                            className="text-gray-600 hover:text-gray-900"
-                            onClick={() => alert(`Editar ${user.username} - Próximamente`)}
-                            title="Editar"
-                          >
+                          </Link>
+                          <Link href={`/users/new?id=${user.id}`} className="text-gray-600 hover:text-gray-900" title="Editar">
                             <Edit className="h-4 w-4" />
-                          </button>
+                          </Link>
                           <button
                             onClick={() => deleteUser(user.id)}
                             className="text-red-600 hover:text-red-900"

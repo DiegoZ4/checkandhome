@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState, useEffect } from 'react'
-import { Home, Car, Plus, Search, Trash2, Edit, Eye, MapPin } from 'lucide-react'
+import { Home, Car, Plus, Search, Trash2, Edit, Eye, MapPin, List, LayoutGrid } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
@@ -14,11 +14,14 @@ function PropertiesTable() {
   const [properties, setProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  // Sin elección manual del usuario, la vista por defecto depende de la categoría.
+  const [viewModeOverride, setViewModeOverride] = useState<'list' | 'grid' | null>(null)
 
   const isCochera = category === 'cochera'
   const title = isCochera ? 'Cocheras' : 'Alojamientos'
   const Icon = isCochera ? Car : Home
   const addLabel = isCochera ? 'Agregar Cochera' : 'Agregar Propiedad'
+  const viewMode = viewModeOverride ?? (isCochera ? 'grid' : 'list')
 
   useEffect(() => {
     setProperties(loadProperties())
@@ -97,23 +100,43 @@ function PropertiesTable() {
           </div>
         </div>
 
-        {/* Buscador */}
-        <div className="mb-6 max-w-md">
-          <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
-            Buscador
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
+        {/* Buscador + Alternar vista */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-end gap-3">
+          <div className="max-w-md flex-1">
+            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+              Buscador
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                id="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black"
+                placeholder={isCochera ? 'Buscar por nombre o ubicación...' : 'Buscar por nombre de la propiedad o zona...'}
+              />
             </div>
-            <input
-              type="text"
-              id="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black"
-              placeholder={isCochera ? 'Buscar por nombre o ubicación...' : 'Buscar por nombre de la propiedad o zona...'}
-            />
+          </div>
+          <div className="inline-flex rounded-md border border-gray-300 bg-white overflow-hidden self-start">
+            <button
+              type="button"
+              onClick={() => setViewModeOverride('list')}
+              title="Vista de lista"
+              className={`p-2 ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+            >
+              <List className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewModeOverride('grid')}
+              title="Vista de cuadrícula"
+              className={`p-2 border-l border-gray-300 ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+            >
+              <LayoutGrid className="h-5 w-5" />
+            </button>
           </div>
         </div>
 
@@ -145,8 +168,8 @@ function PropertiesTable() {
               )}
             </div>
           </div>
-        ) : isCochera ? (
-          /* Vista de tarjetas para Cocheras */
+        ) : viewMode === 'grid' ? (
+          /* Vista de cuadrícula */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((p) => (
               <div key={p.id} className="bg-white shadow rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
@@ -155,7 +178,7 @@ function PropertiesTable() {
                   {p.photos && p.photos[0] ? (
                     <img src={p.photos[0]} alt={p.name} className="w-full h-full object-cover" />
                   ) : (
-                    <Car className="h-12 w-12 text-gray-300" />
+                    <Icon className="h-12 w-12 text-gray-300" />
                   )}
                 </div>
                 <div className="p-4">
@@ -172,18 +195,27 @@ function PropertiesTable() {
                   {/* Acciones */}
                   <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
                     <div className="flex space-x-3">
-                      <button
+                      <Link
+                        href={`/units/${p.id}`}
                         className="text-indigo-600 hover:text-indigo-900 text-sm font-medium flex items-center"
-                        onClick={() => alert(`Ver ${p.name} - Próximamente`)}
                       >
                         <Eye className="h-4 w-4 mr-1" /> Ver
-                      </button>
-                      <button
-                        className="text-gray-600 hover:text-gray-900 text-sm font-medium flex items-center"
-                        onClick={() => alert(`Editar ${p.name} - Próximamente`)}
-                      >
-                        <Edit className="h-4 w-4 mr-1" /> Editar
-                      </button>
+                      </Link>
+                      {isCochera ? (
+                        <button
+                          className="text-gray-600 hover:text-gray-900 text-sm font-medium flex items-center"
+                          onClick={() => alert(`Editar ${p.name} - Próximamente`)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" /> Editar
+                        </button>
+                      ) : (
+                        <Link
+                          href={`/units/new?category=${category}&id=${p.id}`}
+                          className="text-gray-600 hover:text-gray-900 text-sm font-medium flex items-center"
+                        >
+                          <Edit className="h-4 w-4 mr-1" /> Editar
+                        </Link>
+                      )}
                     </div>
                     <button
                       onClick={() => moveToTrash(p.id)}
@@ -222,20 +254,22 @@ function PropertiesTable() {
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{p.apartment || '-'}</td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-3">
-                          <button
-                            className="text-indigo-600 hover:text-indigo-900"
-                            onClick={() => alert(`Ver ${p.name} - Próximamente`)}
-                            title="Ver"
-                          >
+                          <Link href={`/units/${p.id}`} className="text-indigo-600 hover:text-indigo-900" title="Ver">
                             <Eye className="h-4 w-4" />
-                          </button>
-                          <button
-                            className="text-gray-600 hover:text-gray-900"
-                            onClick={() => alert(`Editar ${p.name} - Próximamente`)}
-                            title="Editar"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
+                          </Link>
+                          {isCochera ? (
+                            <button
+                              className="text-gray-600 hover:text-gray-900"
+                              onClick={() => alert(`Editar ${p.name} - Próximamente`)}
+                              title="Editar"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                          ) : (
+                            <Link href={`/units/new?category=${category}&id=${p.id}`} className="text-gray-600 hover:text-gray-900" title="Editar">
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          )}
                           <button
                             onClick={() => moveToTrash(p.id)}
                             className="text-red-600 hover:text-red-900"

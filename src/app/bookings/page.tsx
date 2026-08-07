@@ -14,6 +14,14 @@ import {
   getConditionName,
   getCurrencyName,
 } from '@/lib/reservations'
+import { loadProperties, Property, ZONAS, PROPERTY_TYPES, AMENITIES } from '@/lib/properties'
+
+const BEDROOM_BUCKETS = ['1', '2', '3', '4', '+ de 5'] as const
+
+function matchesBedroomBucket(bedrooms: string, bucket: string) {
+  const n = parseInt(bedrooms) || 0
+  return bucket === '+ de 5' ? n > 5 : String(n) === bucket
+}
 
 export default function BookingsPage() {
   const [reservations, setReservations] = useState<Reservation[]>([])
@@ -30,14 +38,29 @@ export default function BookingsPage() {
   const [fHabitaciones, setFHabitaciones] = useState(0)
   const [fMascotas, setFMascotas] = useState(false)
   const [fCochera, setFCochera] = useState(false)
+
+  // Filtros por atributos de la propiedad
+  const [fBedrooms, setFBedrooms] = useState<string[]>([])
+  const [fPropertyTypes, setFPropertyTypes] = useState<string[]>([])
+  const [fZonas, setFZonas] = useState<string[]>([])
+  const [fAmenities, setFAmenities] = useState<string[]>([])
+
   const [applied, setApplied] = useState<null | {
     property: string; checkIn: string; checkOut: string; pax: number; mascotas: boolean; cochera: boolean
+    bedrooms: string[]; propertyTypes: string[]; zonas: string[]; amenities: string[]
   }>(null)
+
+  const [properties, setProperties] = useState<Property[]>([])
 
   useEffect(() => {
     setReservations(loadReservations())
+    setProperties(loadProperties())
     setLoading(false)
   }, [])
+
+  const toggleInList = (list: string[], value: string, setList: (v: string[]) => void) => {
+    setList(list.includes(value) ? list.filter(v => v !== value) : [...list, value])
+  }
 
   const deleteReservation = (id: number) => {
     if (confirm('¿Estás seguro de que deseas eliminar esta reserva?')) {
@@ -51,6 +74,7 @@ export default function BookingsPage() {
     dateString ? new Date(dateString).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
 
   const money = (value: number) => (value ? value.toLocaleString('es-AR') : '0')
+  const currencySymbol = (currency: string) => (currency === 'PESOS' ? '$' : 'US$')
 
   const runSearch = () => {
     setApplied({
@@ -60,6 +84,10 @@ export default function BookingsPage() {
       pax: fMayores + fMenores,
       mascotas: fMascotas,
       cochera: fCochera,
+      bedrooms: fBedrooms,
+      propertyTypes: fPropertyTypes,
+      zonas: fZonas,
+      amenities: fAmenities,
     })
     setShowPax(false)
   }
@@ -68,6 +96,7 @@ export default function BookingsPage() {
     setFProperty(''); setFCheckIn(''); setFCheckOut('')
     setFMayores(0); setFMenores(0); setFHabitaciones(0)
     setFMascotas(false); setFCochera(false)
+    setFBedrooms([]); setFPropertyTypes([]); setFZonas([]); setFAmenities([])
     setApplied(null)
   }
 
@@ -80,6 +109,17 @@ export default function BookingsPage() {
     if (applied.pax > 0 && r.guests < applied.pax) return false
     if (applied.mascotas && !r.mascotasEnabled) return false
     if (applied.cochera && !r.cocheraEnabled) return false
+
+    // Filtros por atributos de la propiedad vinculada
+    const hasPropertyFilters = applied.bedrooms.length || applied.propertyTypes.length || applied.zonas.length || applied.amenities.length
+    if (hasPropertyFilters) {
+      const property = properties.find(p => String(p.id) === r.propertyId)
+      if (!property) return false
+      if (applied.bedrooms.length && !applied.bedrooms.some(b => matchesBedroomBucket(property.bedrooms, b))) return false
+      if (applied.propertyTypes.length && !applied.propertyTypes.includes(property.propertyType)) return false
+      if (applied.zonas.length && !applied.zonas.includes(property.zona)) return false
+      if (applied.amenities.length && !applied.amenities.every(a => property.amenities?.[a])) return false
+    }
     return true
   })
 
@@ -105,6 +145,32 @@ export default function BookingsPage() {
         <button type="button" onClick={() => onChange(value + 1)} className="h-6 w-6 inline-flex items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100">
           <Plus className="h-3 w-3" />
         </button>
+      </div>
+    </div>
+  )
+
+  const CheckboxGroup = ({
+    title, options, selected, onToggle,
+  }: {
+    title: string
+    options: { id: string; name: string }[]
+    selected: string[]
+    onToggle: (id: string) => void
+  }) => (
+    <div>
+      <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">{title}</p>
+      <div className="space-y-1.5">
+        {options.map(o => (
+          <label key={o.id} className="flex items-center text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={selected.includes(o.id)}
+              onChange={() => onToggle(o.id)}
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2"
+            />
+            {o.name}
+          </label>
+        ))}
       </div>
     </div>
   )
@@ -171,52 +237,88 @@ export default function BookingsPage() {
 
           {/* Buscador avanzado */}
           {showAdvanced && (
-            <div className="mt-3 inline-flex flex-wrap items-end gap-3 bg-white border border-gray-200 rounded-lg p-3 shadow-sm relative">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Nombre de la propiedad</label>
-                <input type="text" value={fProperty} onChange={(e) => setFProperty(e.target.value)} className="rounded-md border-gray-300 shadow-sm sm:text-sm text-black" placeholder="Propiedad" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Check - in</label>
-                <input type="date" value={fCheckIn} onChange={(e) => setFCheckIn(e.target.value)} className="rounded-md border-gray-300 shadow-sm sm:text-sm text-black" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Check - out</label>
-                <input type="date" value={fCheckOut} onChange={(e) => setFCheckOut(e.target.value)} className="rounded-md border-gray-300 shadow-sm sm:text-sm text-black" />
-              </div>
-              <div className="relative">
-                <label className="block text-xs text-gray-500 mb-1">PAX</label>
-                <button
-                  type="button"
-                  onClick={() => setShowPax(s => !s)}
-                  className="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 sm:text-sm text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <Users className="h-4 w-4 mr-2 text-gray-400" />
-                  {fMayores + fMenores > 0 ? `${fMayores + fMenores} pax` : 'PAX'}
-                </button>
+            <div className="mt-3 flex flex-col gap-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm max-w-3xl">
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Nombre de la propiedad</label>
+                  <input type="text" value={fProperty} onChange={(e) => setFProperty(e.target.value)} className="rounded-md border-gray-300 shadow-sm sm:text-sm text-black" placeholder="Propiedad" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Check - in</label>
+                  <input type="date" value={fCheckIn} onChange={(e) => setFCheckIn(e.target.value)} className="rounded-md border-gray-300 shadow-sm sm:text-sm text-black" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Check - out</label>
+                  <input type="date" value={fCheckOut} onChange={(e) => setFCheckOut(e.target.value)} className="rounded-md border-gray-300 shadow-sm sm:text-sm text-black" />
+                </div>
+                <div className="relative">
+                  <label className="block text-xs text-gray-500 mb-1">PAX</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPax(s => !s)}
+                    className="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 sm:text-sm text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    <Users className="h-4 w-4 mr-2 text-gray-400" />
+                    {fMayores + fMenores > 0 ? `${fMayores + fMenores} pax` : 'PAX'}
+                  </button>
 
-                {/* Popover PAX (no obligatorio) */}
-                {showPax && (
-                  <div className="absolute z-10 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg p-3 space-y-2">
-                    <Counter label="Mayores" value={fMayores} onChange={setFMayores} />
-                    <Counter label="Menores" value={fMenores} onChange={setFMenores} />
-                    <Counter label="Habitaciones" value={fHabitaciones} onChange={setFHabitaciones} />
-                    <Toggle label="Mascotas" value={fMascotas} onChange={setFMascotas} />
-                    <Toggle label="Cochera" value={fCochera} onChange={setFCochera} />
-                    <p className="text-[11px] text-gray-400 pt-1">No obligatorio</p>
-                  </div>
+                  {/* Popover PAX (no obligatorio) */}
+                  {showPax && (
+                    <div className="absolute z-10 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg p-3 space-y-2">
+                      <Counter label="Mayores" value={fMayores} onChange={setFMayores} />
+                      <Counter label="Menores" value={fMenores} onChange={setFMenores} />
+                      <Counter label="Habitaciones" value={fHabitaciones} onChange={setFHabitaciones} />
+                      <Toggle label="Mascotas" value={fMascotas} onChange={setFMascotas} />
+                      <Toggle label="Cochera" value={fCochera} onChange={setFCochera} />
+                      <p className="text-[11px] text-gray-400 pt-1">No obligatorio</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Filtros por atributos de la propiedad */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-semibold text-gray-800 mb-3">FILTROS</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                  <CheckboxGroup
+                    title="Habitaciones"
+                    options={BEDROOM_BUCKETS.map(b => ({ id: b, name: b }))}
+                    selected={fBedrooms}
+                    onToggle={(id) => toggleInList(fBedrooms, id, setFBedrooms)}
+                  />
+                  <CheckboxGroup
+                    title="Tipo de alojamiento"
+                    options={PROPERTY_TYPES as unknown as { id: string; name: string }[]}
+                    selected={fPropertyTypes}
+                    onToggle={(id) => toggleInList(fPropertyTypes, id, setFPropertyTypes)}
+                  />
+                  <CheckboxGroup
+                    title="Zonas"
+                    options={ZONAS.map(z => ({ id: z, name: z }))}
+                    selected={fZonas}
+                    onToggle={(id) => toggleInList(fZonas, id, setFZonas)}
+                  />
+                  <CheckboxGroup
+                    title="Comodidades"
+                    options={AMENITIES as unknown as { id: string; name: string }[]}
+                    selected={fAmenities}
+                    onToggle={(id) => toggleInList(fAmenities, id, setFAmenities)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 border-t border-gray-100 pt-4">
+                <button onClick={runSearch} className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                  <Check className="h-4 w-4 mr-1" />
+                  Buscar
+                </button>
+                {applied && (
+                  <button onClick={clearSearch} className="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100">
+                    <X className="h-4 w-4 mr-1" />
+                    Limpiar
+                  </button>
                 )}
               </div>
-              <button onClick={runSearch} className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                <Check className="h-4 w-4 mr-1" />
-                Buscar
-              </button>
-              {applied && (
-                <button onClick={clearSearch} className="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100">
-                  <X className="h-4 w-4 mr-1" />
-                  Limpiar
-                </button>
-              )}
             </div>
           )}
         </div>
@@ -285,12 +387,12 @@ export default function BookingsPage() {
                         {r.condition && ` (${getConditionName(r.condition)})`}
                       </td>
                       <td className="px-3 py-3 text-gray-700">{r.nights}</td>
-                      <td className="px-3 py-3 text-gray-700">${money(r.valorNoches)}</td>
-                      <td className="px-3 py-3 text-gray-700">{r.mascotasEnabled ? `$${money(r.mascotasValue)}` : '-'}</td>
-                      <td className="px-3 py-3 text-gray-700">{r.cocheraEnabled ? `$${money(r.cocheraValue)}` : '-'}</td>
-                      <td className="px-3 py-3 text-gray-700">${money(r.cargos)}</td>
+                      <td className="px-3 py-3 text-gray-700">{currencySymbol(r.currency)}{money(r.valorNoches)}</td>
+                      <td className="px-3 py-3 text-gray-700">{r.mascotasEnabled ? `${currencySymbol(r.currency)}${money(r.mascotasValue)}` : '-'}</td>
+                      <td className="px-3 py-3 text-gray-700">{r.cocheraEnabled ? `${currencySymbol(r.currency)}${money(r.cocheraValue)}` : '-'}</td>
+                      <td className="px-3 py-3 text-gray-700">{currencySymbol(r.currency)}{money(r.cargos)}</td>
                       <td className="px-3 py-3 text-gray-700">{r.descuento ? `${r.descuento}%` : '-'}</td>
-                      <td className="px-3 py-3 font-medium text-gray-900">${money(r.totalBruto)}</td>
+                      <td className="px-3 py-3 font-medium text-gray-900">{currencySymbol(r.currency)}{money(r.totalBruto)}</td>
                     </tr>
                   ))}
                 </tbody>

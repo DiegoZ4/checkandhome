@@ -1,6 +1,6 @@
 'use client'
 
-import { Calendar, RefreshCw, Home } from 'lucide-react'
+import { Calendar, RefreshCw, Home, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 
@@ -18,8 +18,7 @@ export default function RatesHomePage() {
         </div>
 
         <div className="bg-white shadow rounded-lg p-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
-            {/* Planes de Tarifa oculto (app al ~50%)
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
             <Link
               href="/rates/plans"
               className="flex flex-col items-center justify-center border-2 border-gray-200 rounded-lg p-10 hover:border-indigo-500 hover:bg-indigo-50 transition-colors group"
@@ -27,7 +26,6 @@ export default function RatesHomePage() {
               <DollarSign className="h-14 w-14 text-gray-600 group-hover:text-indigo-600 mb-4" />
               <span className="text-sm font-semibold uppercase tracking-wide text-gray-700 text-center">Planes de Tarifa</span>
             </Link>
-            */}
 
             <Link
               href="/rates/calendar"

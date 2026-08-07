@@ -726,7 +726,7 @@ function CocheraForm() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [successMessage, setSuccessMessage] = useState('')
 
-  const [data, setData] = useState({ name: '', address: '', description: '' })
+  const [data, setData] = useState({ name: '', address: '', apartment: '', description: '' })
   const [photos, setPhotos] = useState<string[]>([])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -771,7 +771,7 @@ function CocheraForm() {
         address: data.address.trim(),
         number: '',
         floor: '',
-        apartment: '',
+        apartment: data.apartment.trim(),
         description: data.description.trim(),
         bedrooms: '',
         bathrooms: '',
@@ -857,6 +857,10 @@ function CocheraForm() {
                   <label htmlFor="address" className="block text-sm font-medium text-gray-700">Dirección *</label>
                   <input type="text" id="address" name="address" value={data.address} onChange={handleChange} className={`mt-1 ${inputClass('address')}`} placeholder="Av. Colón 1234" />
                   {errors.address && <p className="mt-2 text-sm text-red-600">{errors.address}</p>}
+                </div>
+                <div>
+                  <label htmlFor="apartment" className="block text-sm font-medium text-gray-700">Número de cochera / Piso</label>
+                  <input type="text" id="apartment" name="apartment" value={data.apartment} onChange={handleChange} className={`mt-1 ${inputClass()}`} placeholder="Ej: Cochera 12 - Subsuelo 1" />
                 </div>
               </div>
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState, useEffect, useMemo } from 'react'
-import { Calendar, ArrowLeft, Save, Paperclip, User } from 'lucide-react'
+import { Calendar, ArrowLeft, Save, Paperclip, User, Search } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
@@ -31,10 +31,19 @@ function BookingForm() {
   const [properties, setProperties] = useState<Property[]>([])
   const [cocheras, setCocheras] = useState<Property[]>([])
 
+  // Excepción de DNI: solo un admin puede confirmar una reserva Directa/Booking sin el archivo.
+  const [isAdmin, setIsAdmin] = useState(false)
+
   useEffect(() => {
     const all = loadProperties().filter(p => !p.eliminado)
     setProperties(all.filter(p => (p.category || 'alojamiento') === 'alojamiento'))
     setCocheras(all.filter(p => p.category === 'cochera'))
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('checkAndPointUser') || 'null')
+      setIsAdmin(!!storedUser?.role && storedUser.role.toLowerCase().includes('admin'))
+    } catch {
+      setIsAdmin(false)
+    }
   }, [])
 
   const [data, setData] = useState({
@@ -61,6 +70,7 @@ function BookingForm() {
     senaPct: '20',
     status: 'PENDIENTE',
     observaciones: '',
+    dniException: false,
   })
   const [hasAttachment, setHasAttachment] = useState(false)
   const [attachmentName, setAttachmentName] = useState('')
@@ -102,6 +112,7 @@ function BookingForm() {
       senaPct: String(found.senaPct),
       status: found.status,
       observaciones: found.observaciones,
+      dniException: found.dniException,
     })
     setHasAttachment(found.hasAttachment)
     setAttachmentName(found.attachmentName)
@@ -110,6 +121,22 @@ function BookingForm() {
   }, [editIdParam])
 
   const selectedProperty = properties.find(p => String(p.id) === data.propertyId)
+
+  // Solo un admin puede autorizar confirmar sin DNI, y solo en canales Directa/Booking.
+  const canWaiveDni = isAdmin && (data.channel === 'DIRECTA' || data.channel === 'BOOKING')
+  const dniWaived = canWaiveDni && data.dniException
+
+  // Buscador de propiedad (combobox): mientras está abierto se muestra el texto buscado,
+  // cerrado muestra el nombre de la propiedad seleccionada.
+  const [showPropertyDropdown, setShowPropertyDropdown] = useState(false)
+  const [propertySearch, setPropertySearch] = useState('')
+  const filteredProperties = properties.filter(p => p.name.toLowerCase().includes(propertySearch.toLowerCase()))
+
+  const selectProperty = (p: Property) => {
+    setData(prev => ({ ...prev, propertyId: String(p.id) }))
+    if (errors.propertyId) setErrors(prev => ({ ...prev, propertyId: '' }))
+    setShowPropertyDropdown(false)
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -172,6 +199,7 @@ function BookingForm() {
   }, [data, selectedProperty])
 
   const money = (v: number) => v.toLocaleString('es-AR')
+  const currencySymbol = data.currency === 'PESOS' ? '$' : 'US$'
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
@@ -183,9 +211,11 @@ function BookingForm() {
     }
     if (!data.firstName.trim()) newErrors.firstName = 'Nombre obligatorio'
     if (!data.lastName.trim()) newErrors.lastName = 'Apellido obligatorio'
-    // La reserva puede crearse sin archivo, pero NO puede ser CONFIRMADA sin él.
-    if (data.status === 'CONFIRMADA' && !hasAttachment) {
-      newErrors.status = 'No se puede CONFIRMAR sin un archivo adjunto'
+    if (!data.phone.trim()) newErrors.phone = 'Teléfono obligatorio'
+    // La reserva puede crearse sin archivo, pero NO puede ser CONFIRMADA sin él,
+    // salvo que un admin autorice la excepción (solo canales Directa/Booking).
+    if (data.status === 'CONFIRMADA' && !hasAttachment && !dniWaived) {
+      newErrors.status = 'No se puede CONFIRMAR sin un archivo adjunto (o autorización de admin)'
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -217,6 +247,7 @@ function BookingForm() {
         dni: data.dni.trim(),
         hasAttachment,
         attachmentName,
+        dniException: dniWaived,
         hasPaymentProof,
         paymentProofName,
         observaciones: data.observaciones.trim(),
@@ -302,12 +333,48 @@ function BookingForm() {
                 Datos de la reserva
               </h3>
 
-              <div className="mb-6">
+              <div className="mb-6 relative">
                 <label htmlFor="propertyId" className="block text-sm font-medium text-gray-700">Seleccionar Propiedad *</label>
-                <select id="propertyId" name="propertyId" value={data.propertyId} onChange={handleChange} className={`mt-1 ${inputClass('propertyId')}`}>
-                  <option value="">Seleccionar Propiedad</option>
-                  {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
+                <div className="relative mt-1">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    id="propertyId"
+                    autoComplete="off"
+                    value={showPropertyDropdown ? propertySearch : (selectedProperty?.name || '')}
+                    onChange={(e) => setPropertySearch(e.target.value)}
+                    onFocus={() => { setPropertySearch(''); setShowPropertyDropdown(true) }}
+                    onBlur={() => setShowPropertyDropdown(false)}
+                    className={`pl-9 ${inputClass('propertyId')}`}
+                    placeholder="Buscar propiedad..."
+                  />
+                </div>
+
+                {showPropertyDropdown && (
+                  <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-md shadow-lg">
+                    {filteredProperties.length === 0 ? (
+                      <li className="px-3 py-2 text-sm text-gray-500">No se encontraron propiedades.</li>
+                    ) : (
+                      filteredProperties.map(p => (
+                        <li key={p.id}>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => selectProperty(p)}
+                            className={`block w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 ${
+                              String(p.id) === data.propertyId ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-700'
+                            }`}
+                          >
+                            {p.name}
+                          </button>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                )}
+
                 {errors.propertyId && <p className="mt-2 text-sm text-red-600">{errors.propertyId}</p>}
                 {properties.length === 0 && (
                   <p className="mt-2 text-sm text-amber-600">No hay propiedades cargadas. <Link href="/units/new?category=alojamiento" className="underline">Crear una</Link>.</p>
@@ -360,8 +427,9 @@ function BookingForm() {
                   {errors.lastName && <p className="mt-2 text-sm text-red-600">{errors.lastName}</p>}
                 </div>
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Teléfono</label>
-                  <input type="tel" id="phone" name="phone" value={data.phone} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Teléfono *</label>
+                  <input type="tel" id="phone" name="phone" value={data.phone} onChange={handleChange} className={`mt-1 ${inputClass('phone')}`} />
+                  {errors.phone && <p className="mt-2 text-sm text-red-600">{errors.phone}</p>}
                 </div>
                 <div>
                   <label htmlFor="docType" className="block text-sm font-medium text-gray-700">Tipo de Documento</label>
@@ -470,27 +538,38 @@ function BookingForm() {
 
               {/* Totales calculados */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 border-t border-gray-100 pt-6">
-                <ReadonlyField label="Total NETO" value={`$${money(calc.totalNeto)}`} />
-                <ReadonlyField label="Cargos (limpieza + servicio)" value={`$${money(calc.cargos)}`} />
-                <ReadonlyField label="Total BRUTO" value={`$${money(calc.totalBruto)}`} />
+                <ReadonlyField label="Total NETO" value={`${currencySymbol}${money(calc.totalNeto)}`} />
+                <ReadonlyField label="Cargos (limpieza + servicio)" value={`${currencySymbol}${money(calc.cargos)}`} />
+                <ReadonlyField label="Total BRUTO" value={`${currencySymbol}${money(calc.totalBruto)}`} />
                 <div>
                   <label htmlFor="senaPct" className="block text-sm font-medium text-gray-700">Seña</label>
                   <select id="senaPct" name="senaPct" value={data.senaPct} onChange={handleChange} className={`mt-1 ${inputClass()}`}>
                     {SENA_OPTIONS.map(s => <option key={s} value={s}>{s}%</option>)}
                   </select>
                 </div>
-                <ReadonlyField label="Valor de la seña (redondeado)" value={`$${money(calc.senaValue)}`} />
-                <ReadonlyField label="Restante" value={`$${money(calc.restante)}`} />
+                <ReadonlyField label="Valor de la seña (redondeado)" value={`${currencySymbol}${money(calc.senaValue)}`} />
+                <ReadonlyField label="Restante" value={`${currencySymbol}${money(calc.restante)}`} />
                 <div>
                   <label htmlFor="status" className="block text-sm font-medium text-gray-700">Estado de la reserva</label>
                   <select id="status" name="status" value={data.status} onChange={handleChange} className={`mt-1 ${inputClass('status')}`}>
                     {RESERVATION_STATUSES.map(s => (
-                      <option key={s.id} value={s.id} disabled={s.id === 'CONFIRMADA' && !hasAttachment}>
-                        {s.name}{s.id === 'CONFIRMADA' && !hasAttachment ? ' (requiere archivo)' : ''}
+                      <option key={s.id} value={s.id} disabled={s.id === 'CONFIRMADA' && !hasAttachment && !dniWaived}>
+                        {s.name}{s.id === 'CONFIRMADA' && !hasAttachment && !dniWaived ? ' (requiere archivo)' : ''}
                       </option>
                     ))}
                   </select>
                   {errors.status && <p className="mt-2 text-sm text-red-600">{errors.status}</p>}
+                  {!hasAttachment && canWaiveDni && (
+                    <label className="mt-2 flex items-start text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={data.dniException}
+                        onChange={(e) => setData(prev => ({ ...prev, dniException: e.target.checked }))}
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2 mt-0.5"
+                      />
+                      Confirmar sin DNI (autorización de admin — solo Directa/Booking)
+                    </label>
+                  )}
                 </div>
               </div>
             </div>

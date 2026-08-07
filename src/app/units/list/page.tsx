@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState, useEffect } from 'react'
-import { Home, Car, Plus, Search, Trash2, Edit, Eye, MapPin, List, LayoutGrid } from 'lucide-react'
+import { Home, Car, Plus, Search, Trash2, Edit, Eye, MapPin, List, LayoutGrid, AlertTriangle, X } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
@@ -23,20 +23,39 @@ function PropertiesTable() {
   const addLabel = isCochera ? 'Agregar Cochera' : 'Agregar Propiedad'
   const viewMode = viewModeOverride ?? (isCochera ? 'grid' : 'list')
 
+  // Eliminar alojamientos es una acción exclusiva del tipo de usuario admin.
+  const [isAdmin, setIsAdmin] = useState(false)
+
   useEffect(() => {
     setProperties(loadProperties())
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('checkAndPointUser') || 'null')
+      setIsAdmin(!!storedUser?.role && storedUser.role.toLowerCase().includes('admin'))
+    } catch {
+      setIsAdmin(false)
+    }
     setLoading(false)
   }, [])
 
+  const canDelete = isCochera || isAdmin
+
+  // Confirmación de borrado: propiedad pendiente de confirmar (o null si el modal está cerrado).
+  const [confirmTarget, setConfirmTarget] = useState<Property | null>(null)
+
   // Mover a la papelera (eliminado = true) en lugar de borrar.
   const moveToTrash = (id: number) => {
-    if (confirm('¿Mover esta propiedad a la papelera?')) {
-      const updated = properties.map(p =>
-        p.id === id ? { ...p, eliminado: true, deletedAt: new Date().toISOString() } : p
-      )
-      setProperties(updated)
-      saveProperties(updated)
-    }
+    if (!canDelete) return
+    const updated = properties.map(p =>
+      p.id === id ? { ...p, eliminado: true, deletedAt: new Date().toISOString() } : p
+    )
+    setProperties(updated)
+    saveProperties(updated)
+  }
+
+  const confirmMoveToTrash = () => {
+    if (!confirmTarget) return
+    moveToTrash(confirmTarget.id)
+    setConfirmTarget(null)
   }
 
   // Propiedades activas (no eliminadas) de la categoría seleccionada.
@@ -217,12 +236,14 @@ function PropertiesTable() {
                         </Link>
                       )}
                     </div>
-                    <button
-                      onClick={() => moveToTrash(p.id)}
-                      className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Eliminar
-                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={() => setConfirmTarget(p)}
+                        className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Eliminar
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -270,13 +291,15 @@ function PropertiesTable() {
                               <Edit className="h-4 w-4" />
                             </Link>
                           )}
-                          <button
-                            onClick={() => moveToTrash(p.id)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Mover a la papelera"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {canDelete && (
+                            <button
+                              onClick={() => setConfirmTarget(p)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Mover a la papelera"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -287,6 +310,46 @@ function PropertiesTable() {
           </div>
         )}
       </div>
+
+      {/* Modal de confirmación */}
+      {confirmTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setConfirmTarget(null)} />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-red-100">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
+              <div className="ml-4 flex-1">
+                <h3 className="text-base font-medium text-gray-900">
+                  {isCochera ? 'Eliminar cochera' : 'Eliminar alojamiento'}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  ¿Seguro que querés mover <span className="font-medium text-gray-700">{confirmTarget.name}</span> a la papelera?
+                </p>
+              </div>
+              <button onClick={() => setConfirmTarget(null)} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setConfirmTarget(null)}
+                className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmMoveToTrash}
+                className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

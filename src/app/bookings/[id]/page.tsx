@@ -44,7 +44,7 @@ export default function ReservationDetailPage() {
   const formatDate = (dateString: string) =>
     dateString ? new Date(dateString).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
 
-  const money = (value: number) => (value ? `$${value.toLocaleString('es-AR')}` : '$0')
+  const money = (value: number) => value.toLocaleString('es-AR')
 
   if (reservation === undefined) {
     return <div className="min-h-screen bg-gray-50" />
@@ -65,6 +65,8 @@ export default function ReservationDetailPage() {
   }
 
   const r = reservation
+  const currencySymbol = r.currency === 'PESOS' ? '$' : 'US$'
+  const amount = (value: number) => `${currencySymbol}${money(value)}`
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -117,7 +119,14 @@ export default function ReservationDetailPage() {
               <Field label="Teléfono" value={r.phone} />
               <Field label="Tipo de documento" value={r.docType} />
               <Field label="DNI" value={r.dni} />
-              <Field label="Archivo adjunto" value={r.hasAttachment ? (r.attachmentName || 'Sí') : 'No'} />
+              <Field
+                label="Archivo adjunto"
+                value={
+                  r.hasAttachment
+                    ? (r.attachmentName || 'Sí')
+                    : (r.dniException ? 'No (excepción autorizada por admin)' : 'No')
+                }
+              />
             </div>
           </Section>
 
@@ -129,15 +138,15 @@ export default function ReservationDetailPage() {
                 value={r.condition ? `${getChannelName(r.channel)} (${getConditionName(r.condition)})` : getChannelName(r.channel)}
               />
               <Field label="Noches" value={r.nights} />
-              <Field label="Valor noches" value={money(r.valorNoches)} />
-              <Field label="Mascotas" value={r.mascotasEnabled ? `${r.mascotasQty} - ${money(r.mascotasValue)}` : 'No'} />
-              <Field label="Cochera" value={r.cocheraEnabled ? money(r.cocheraValue) : 'No'} />
+              <Field label="Valor noches" value={amount(r.valorNoches)} />
+              <Field label="Mascotas" value={r.mascotasEnabled ? `${r.mascotasQty} - ${amount(r.mascotasValue)}` : 'No'} />
+              <Field label="Cochera" value={r.cocheraEnabled ? amount(r.cocheraValue) : 'No'} />
               <Field label="Descuento" value={r.descuento ? `${r.descuento}%` : '-'} />
-              <Field label="Cargos (limpieza + servicio)" value={money(r.cargos)} />
-              <Field label="Total NETO" value={money(r.totalNeto)} />
-              <Field label="Total BRUTO" value={money(r.totalBruto)} />
-              <Field label="Seña" value={`${r.senaPct}% (${money(r.senaValue)})`} />
-              <Field label="Restante" value={money(r.restante)} />
+              <Field label="Cargos (limpieza + servicio)" value={amount(r.cargos)} />
+              <Field label="Total NETO" value={amount(r.totalNeto)} />
+              <Field label="Total BRUTO" value={amount(r.totalBruto)} />
+              <Field label="Seña" value={`${r.senaPct}% (${amount(r.senaValue)})`} />
+              <Field label="Restante" value={amount(r.restante)} />
             </div>
           </Section>
 

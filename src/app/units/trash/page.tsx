@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState, useEffect } from 'react'
-import { Trash2, RotateCcw, Search, ArrowLeft, Plus } from 'lucide-react'
+import { Trash2, RotateCcw, Search, ArrowLeft, Plus, AlertTriangle, X } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
@@ -15,8 +15,18 @@ function TrashView() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
 
+  // Eliminar definitivamente alojamientos es una acción exclusiva del tipo de usuario admin.
+  const [isAdmin, setIsAdmin] = useState(false)
+  const canDelete = category === 'cochera' || isAdmin
+
   useEffect(() => {
     setProperties(loadProperties())
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('checkAndPointUser') || 'null')
+      setIsAdmin(!!storedUser?.role && storedUser.role.toLowerCase().includes('admin'))
+    } catch {
+      setIsAdmin(false)
+    }
     setLoading(false)
   }, [])
 
@@ -31,20 +41,28 @@ function TrashView() {
 
   // Eliminar definitivamente
   const deleteForever = (id: number) => {
-    if (confirm('¿Eliminar definitivamente esta propiedad? Esta acción no se puede deshacer.')) {
-      const updated = properties.filter(p => p.id !== id)
-      setProperties(updated)
-      saveProperties(updated)
-    }
+    if (!canDelete) return
+    const updated = properties.filter(p => p.id !== id)
+    setProperties(updated)
+    saveProperties(updated)
   }
 
   // Vaciar papelera (de esta categoría)
   const emptyTrash = () => {
-    if (confirm('¿Vaciar la papelera? Se eliminarán definitivamente todas las propiedades de la papelera.')) {
-      const updated = properties.filter(p => !(p.eliminado && (p.category || 'alojamiento') === category))
-      setProperties(updated)
-      saveProperties(updated)
-    }
+    if (!canDelete) return
+    const updated = properties.filter(p => !(p.eliminado && (p.category || 'alojamiento') === category))
+    setProperties(updated)
+    saveProperties(updated)
+  }
+
+  // Confirmación de borrado definitivo (una propiedad puntual, o toda la papelera).
+  const [confirmAction, setConfirmAction] = useState<{ type: 'one'; property: Property } | { type: 'all' } | null>(null)
+
+  const runConfirmedAction = () => {
+    if (!confirmAction) return
+    if (confirmAction.type === 'one') deleteForever(confirmAction.property.id)
+    else emptyTrash()
+    setConfirmAction(null)
   }
 
   const deleted = properties.filter(p => p.eliminado && (p.category || 'alojamiento') === category)
@@ -144,13 +162,15 @@ function TrashView() {
                       >
                         <RotateCcw className="h-4 w-4" />
                       </button>
-                      <button
-                        onClick={() => deleteForever(p.id)}
-                        className="inline-flex items-center justify-center h-8 w-8 rounded-full text-red-600 hover:bg-red-100"
-                        title="Eliminar definitivamente la propiedad"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {canDelete && (
+                        <button
+                          onClick={() => setConfirmAction({ type: 'one', property: p })}
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-full text-red-600 hover:bg-red-100"
+                          title="Eliminar definitivamente la propiedad"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -159,13 +179,15 @@ function TrashView() {
 
             {/* Acciones */}
             <div className="flex flex-wrap justify-end gap-3 mt-6">
-              <button
-                onClick={emptyTrash}
-                disabled={deleted.length === 0}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Vaciar Papelera
-              </button>
+              {canDelete && (
+                <button
+                  onClick={() => setConfirmAction({ type: 'all' })}
+                  disabled={deleted.length === 0}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Vaciar Papelera
+                </button>
+              )}
               <Link
                 href={`/units/list?category=${category}`}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700"
@@ -176,6 +198,50 @@ function TrashView() {
           </div>
         </div>
       </div>
+
+      {/* Modal de confirmación */}
+      {confirmAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setConfirmAction(null)} />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-red-100">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
+              <div className="ml-4 flex-1">
+                <h3 className="text-base font-medium text-gray-900">
+                  {confirmAction.type === 'one' ? 'Eliminar definitivamente' : 'Vaciar papelera'}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  {confirmAction.type === 'one' ? (
+                    <>¿Seguro que querés eliminar definitivamente <span className="font-medium text-gray-700">{confirmAction.property.name}</span>? Esta acción no se puede deshacer.</>
+                  ) : (
+                    '¿Seguro que querés vaciar la papelera? Se eliminarán definitivamente todas las propiedades. Esta acción no se puede deshacer.'
+                  )}
+                </p>
+              </div>
+              <button onClick={() => setConfirmAction(null)} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={runConfirmedAction}
+                className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

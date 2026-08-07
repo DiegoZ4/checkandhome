@@ -62,6 +62,8 @@ export interface Reservation {
   dni: string
   hasAttachment: boolean
   attachmentName: string
+  // Confirmada sin DNI adjunto por excepción de un usuario admin (solo canales Directa/Booking).
+  dniException: boolean
 
   hasPaymentProof: boolean
   paymentProofName: string

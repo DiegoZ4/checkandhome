@@ -150,10 +150,11 @@ export default function ReservationDetailPage() {
             </div>
           </Section>
 
-          {(r.hasPaymentProof || r.observaciones) && (
+          {(r.hasPaymentProof || r.hasVideo || r.observaciones) && (
             <Section title="Comprobante de pago / Observaciones">
               <div className="grid grid-cols-1 gap-6">
                 <Field label="Comprobante de pago" value={r.hasPaymentProof ? (r.paymentProofName || 'Sí') : 'No'} />
+                <Field label="Video" value={r.hasVideo ? (r.videoName || 'Sí') : 'No'} />
                 {r.observaciones && (
                   <div>
                     <p className="text-xs font-medium text-gray-500">Observaciones / Notas</p>

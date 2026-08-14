@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState, useEffect, useMemo } from 'react'
-import { Calendar, ArrowLeft, Save, Paperclip, User, Search } from 'lucide-react'
+import { Calendar, ArrowLeft, Save, Paperclip, User, Search, Video as VideoIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
@@ -76,6 +76,8 @@ function BookingForm() {
   const [attachmentName, setAttachmentName] = useState('')
   const [hasPaymentProof, setHasPaymentProof] = useState(false)
   const [paymentProofName, setPaymentProofName] = useState('')
+  const [hasVideo, setHasVideo] = useState(false)
+  const [videoName, setVideoName] = useState('')
 
   // Modo edición: si hay ?id=, precargamos los datos de la reserva existente.
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -118,6 +120,8 @@ function BookingForm() {
     setAttachmentName(found.attachmentName)
     setHasPaymentProof(found.hasPaymentProof)
     setPaymentProofName(found.paymentProofName)
+    setHasVideo(found.hasVideo)
+    setVideoName(found.videoName)
   }, [editIdParam])
 
   const selectedProperty = properties.find(p => String(p.id) === data.propertyId)
@@ -161,6 +165,14 @@ function BookingForm() {
     if (file) {
       setHasPaymentProof(true)
       setPaymentProofName(file.name)
+    }
+  }
+
+  const handleVideoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setHasVideo(true)
+      setVideoName(file.name)
     }
   }
 
@@ -212,6 +224,10 @@ function BookingForm() {
     if (!data.firstName.trim()) newErrors.firstName = 'Nombre obligatorio'
     if (!data.lastName.trim()) newErrors.lastName = 'Apellido obligatorio'
     if (!data.phone.trim()) newErrors.phone = 'Teléfono obligatorio'
+    // La cantidad de huéspedes no puede superar el máximo configurado en la propiedad.
+    if (selectedProperty?.maxGuests && parseInt(data.guests) > parseInt(selectedProperty.maxGuests)) {
+      newErrors.guests = `La propiedad admite un máximo de ${selectedProperty.maxGuests} huésped${selectedProperty.maxGuests === '1' ? '' : 'es'}`
+    }
     // La reserva puede crearse sin archivo, pero NO puede ser CONFIRMADA sin él,
     // salvo que un admin autorice la excepción (solo canales Directa/Booking).
     if (data.status === 'CONFIRMADA' && !hasAttachment && !dniWaived) {
@@ -250,6 +266,8 @@ function BookingForm() {
         dniException: dniWaived,
         hasPaymentProof,
         paymentProofName,
+        hasVideo,
+        videoName,
         observaciones: data.observaciones.trim(),
         currency: data.currency,
         channel: data.channel,
@@ -394,7 +412,20 @@ function BookingForm() {
                 </div>
                 <div>
                   <label htmlFor="guests" className="block text-sm font-medium text-gray-700">Cantidad de huéspedes</label>
-                  <input type="number" min="1" id="guests" name="guests" value={data.guests} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                  <input
+                    type="number"
+                    min="1"
+                    max={selectedProperty?.maxGuests || undefined}
+                    id="guests"
+                    name="guests"
+                    value={data.guests}
+                    onChange={handleChange}
+                    className={`mt-1 ${inputClass('guests')}`}
+                  />
+                  {selectedProperty?.maxGuests && !errors.guests && (
+                    <p className="mt-1 text-xs text-gray-500">Máximo de la propiedad: {selectedProperty.maxGuests}</p>
+                  )}
+                  {errors.guests && <p className="mt-2 text-sm text-red-600">{errors.guests}</p>}
                 </div>
                 <div>
                   <label htmlFor="checkInTime" className="block text-sm font-medium text-gray-700">Horario check-in</label>
@@ -589,6 +620,19 @@ function BookingForm() {
               {hasPaymentProof && (
                 <p className="mt-3 text-sm text-green-600">Archivo adjunto: {paymentProofName}</p>
               )}
+
+              <div className="flex items-center justify-between mt-6">
+                <label className="block text-sm font-medium text-gray-700">Video</label>
+                <label className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer">
+                  <VideoIcon className="h-4 w-4 mr-2" />
+                  + Agregar video
+                  <input type="file" accept="video/*" className="hidden" onChange={handleVideoFile} />
+                </label>
+              </div>
+              {hasVideo && (
+                <p className="mt-3 text-sm text-green-600">Video adjunto: {videoName}</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">Se guarda el nombre del archivo como referencia; el video no queda almacenado en el sistema.</p>
 
               <div className="mt-6">
                 <label htmlFor="observaciones" className="block text-sm font-medium text-gray-700">Observaciones / Notas</label>

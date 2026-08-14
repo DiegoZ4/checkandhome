@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Search, X, Save, Check } from 'lucide-react'
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Search, X, Save, Check, CalendarRange } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import { loadProperties, Property } from '@/lib/properties'
@@ -22,6 +22,9 @@ import {
 
 const WINDOW_DAYS = 14 // días visibles en la grilla
 
+// Orden Dom..Sáb, igual que Date.getDay() (0 = domingo)
+const WEEKDAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+
 export default function RatesCalendarPage() {
   const [loading, setLoading] = useState(true)
   const [properties, setProperties] = useState<Property[]>([])
@@ -41,6 +44,13 @@ export default function RatesCalendarPage() {
 
   // Selección de fechas (posiblemente salteadas) para una propiedad, antes de abrir el panel.
   const [selectedDates, setSelectedDates] = useState<null | { property: Property; keys: string[] }>(null)
+
+  // Selección avanzada de fechas (estilo Booking): rango + filtro por día de la semana.
+  const [showAdvancedPicker, setShowAdvancedPicker] = useState(false)
+  const [advPropertyId, setAdvPropertyId] = useState('')
+  const [advFrom, setAdvFrom] = useState('')
+  const [advTo, setAdvTo] = useState('')
+  const [advWeekdays, setAdvWeekdays] = useState<boolean[]>([true, true, true, true, true, true, true])
 
   useEffect(() => {
     setProperties(loadProperties().filter(p => !p.eliminado && (p.category || 'alojamiento') === 'alojamiento'))
@@ -86,6 +96,38 @@ export default function RatesCalendarPage() {
   }
 
   const cancelSelection = () => setSelectedDates(null)
+
+  const toggleAdvWeekday = (i: number) => {
+    setAdvWeekdays(prev => prev.map((v, idx) => (idx === i ? !v : v)))
+  }
+
+  const openAdvancedPicker = () => {
+    setAdvPropertyId('')
+    setAdvFrom('')
+    setAdvTo('')
+    setAdvWeekdays([true, true, true, true, true, true, true])
+    setShowAdvancedPicker(true)
+  }
+
+  // Rango "Desde/Hasta" + filtro por día de la semana (estilo Booking) → arma la selección salteada.
+  const canApplyAdvancedPicker = advPropertyId && advFrom && advTo && advWeekdays.some(Boolean)
+
+  const applyAdvancedPicker = () => {
+    if (!canApplyAdvancedPicker) return
+    const property = properties.find(p => String(p.id) === advPropertyId)
+    if (!property) return
+    const from = parseDateKey(advFrom)
+    const to = parseDateKey(advTo)
+    const start = from <= to ? from : to
+    const end = from <= to ? to : from
+    const keys: string[] = []
+    for (let d = new Date(start); d <= end; d = addDays(d, 1)) {
+      if (advWeekdays[d.getDay()]) keys.push(dateKey(d))
+    }
+    if (keys.length === 0) return
+    setSelectedDates({ property, keys })
+    setShowAdvancedPicker(false)
+  }
 
   // Abre el panel de edición con exactamente las fechas elegidas (contiguas o no).
   const applySelection = () => {
@@ -134,6 +176,14 @@ export default function RatesCalendarPage() {
   const formatDateKey = (key: string) => {
     const [, month, day] = key.split('-').map(Number)
     return `${String(day).padStart(2, '0')} ${MONTH_NAMES[month - 1].slice(0, 3)}`
+  }
+
+  // Parsea un "YYYY-MM-DD" (de un <input type="date">) como fecha LOCAL.
+  // `new Date("YYYY-MM-DD")` lo interpreta como medianoche UTC, que en husos horarios
+  // detrás de UTC (ej. Argentina, UTC-3) cae en el día anterior al leerlo en hora local.
+  const parseDateKey = (key: string) => {
+    const [year, month, day] = key.split('-').map(Number)
+    return new Date(year, month - 1, day)
   }
 
   const headerMonth = `${MONTH_NAMES[startDate.getMonth()]} de ${startDate.getFullYear()}`
@@ -185,6 +235,13 @@ export default function RatesCalendarPage() {
             <option value="">Todos los planes de tarifa</option>
             {plans.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
           </select>
+          <button
+            onClick={openAdvancedPicker}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <CalendarRange className="h-4 w-4 mr-2 text-gray-400" />
+            Selección avanzada de fechas
+          </button>
         </div>
 
         <div className="flex gap-4">
@@ -285,6 +342,79 @@ export default function RatesCalendarPage() {
           </div>
         </div>
       </div>
+
+      {/* Selección avanzada de fechas: rango + días de la semana (estilo Booking) */}
+      {showAdvancedPicker && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowAdvancedPicker(false)} />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-medium text-gray-900">Selección avanzada de fechas</h3>
+              <button onClick={() => setShowAdvancedPicker(false)} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Propiedad</label>
+                <select
+                  value={advPropertyId}
+                  onChange={(e) => setAdvPropertyId(e.target.value)}
+                  className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm text-black"
+                >
+                  <option value="">Seleccionar propiedad</option>
+                  {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha inicial</label>
+                  <input type="date" value={advFrom} onChange={(e) => setAdvFrom(e.target.value)} className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm text-black" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha final</label>
+                  <input type="date" value={advTo} onChange={(e) => setAdvTo(e.target.value)} className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm text-black" />
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">¿A qué días de la semana querés aplicarles los cambios?</p>
+                <div className="flex flex-wrap gap-3">
+                  {WEEKDAY_LABELS.map((label, i) => (
+                    <label key={label} className="inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={advWeekdays[i]}
+                        onChange={() => toggleAdvWeekday(i)}
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-1.5"
+                      />
+                      <span className="text-sm text-gray-700">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowAdvancedPicker(false)}
+                className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={applyAdvancedPicker}
+                disabled={!canApplyAdvancedPicker}
+                className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Seleccionar fechas
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Barra flotante: aparece mientras hay fechas seleccionadas (pueden ser salteadas) */}
       {selectedDates && (

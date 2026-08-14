@@ -67,6 +67,9 @@ export interface Reservation {
 
   hasPaymentProof: boolean
   paymentProofName: string
+  // Solo se guarda el nombre del archivo, no el contenido (ver hasAttachment/hasPaymentProof).
+  hasVideo: boolean
+  videoName: string
   observaciones: string
 
   // Valor de la reserva

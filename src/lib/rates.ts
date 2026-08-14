@@ -18,19 +18,24 @@ export interface ProximityDiscount {
   percent: string
 }
 
+export interface StayDiscount {
+  duration: string
+  percent: string
+}
+
 export interface RatePlan {
   id: string
   name: string
   description: string
   hasMinNights: boolean
   minNights: number
-  hasPerDayPricing: boolean
-  perDayPrices: Record<string, string>
+  // "Según día": cantidad de noches requeridas por día de la semana (NO es precio).
+  hasPerDayNights: boolean
+  perDayNights: Record<string, string>
   priceVariation: string
   priceVariationType: 'aumento' | 'reduccion'
   hasStayDiscount: boolean
-  stayDiscountDuration: string
-  stayDiscountPercent: string
+  stayDiscounts: StayDiscount[]
   proximityDiscounts: ProximityDiscount[]
   weekendSurcharge: string
   createdAt: string

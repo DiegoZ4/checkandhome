@@ -5,14 +5,13 @@ import { DollarSign, ArrowLeft, Save, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import { loadRatePlans, saveRatePlans, RatePlan, ProximityDiscount } from '@/lib/rates'
+import { loadRatePlans, saveRatePlans, RatePlan, ProximityDiscount, StayDiscount } from '@/lib/rates'
 
 const DAYS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO']
 
 const STAY_DURATIONS = [
   '2 noches', '3 noches', '4 noches', '5 noches', '6 noches',
-  '1 semana', '2 semanas', '3 semanas', '4 semanas', '5 semanas',
-  '6 semanas', '8 semanas', '10 semanas', '12 semanas',
+  '1 semana', '10 días', '2 semanas',
 ]
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
@@ -43,9 +42,9 @@ export default function NewRatePlanPage() {
   const [hasMinNights, setHasMinNights] = useState(false)
   const [minNights, setMinNights] = useState('')
 
-  // Según día
-  const [hasPerDayPricing, setHasPerDayPricing] = useState(false)
-  const [perDayPrices, setPerDayPrices] = useState<Record<string, string>>(
+  // Según día (cantidad de noches requeridas por día, NO precio)
+  const [hasPerDayNights, setHasPerDayNights] = useState(false)
+  const [perDayNights, setPerDayNights] = useState<Record<string, string>>(
     Object.fromEntries(DAYS.map(d => [d, '']))
   )
 
@@ -53,16 +52,20 @@ export default function NewRatePlanPage() {
   const [priceVariation, setPriceVariation] = useState('')
   const [priceVariationType, setPriceVariationType] = useState<'aumento' | 'reduccion'>('aumento')
 
-  // Descuento por duración de estadía
+  // Descuento por duración de estadía (varias filas: duración + %)
   const [hasStayDiscount, setHasStayDiscount] = useState(false)
-  const [stayDiscountDuration, setStayDiscountDuration] = useState('')
-  const [stayDiscountPercent, setStayDiscountPercent] = useState('')
+  const [stayDiscounts, setStayDiscounts] = useState<StayDiscount[]>([{ duration: '', percent: '' }])
 
   // Descuento por proximidad
   const [proximityDiscounts, setProximityDiscounts] = useState<ProximityDiscount[]>([{ days: '', percent: '' }])
 
   // Aumento por fin de semana
   const [weekendSurcharge, setWeekendSurcharge] = useState('0')
+
+  const addStayDiscountRow = () => setStayDiscounts(p => [...p, { duration: '', percent: '' }])
+  const removeStayDiscountRow = (i: number) => setStayDiscounts(p => p.filter((_, idx) => idx !== i))
+  const updateStayDiscountRow = (i: number, field: keyof StayDiscount, value: string) =>
+    setStayDiscounts(p => p.map((row, idx) => idx === i ? { ...row, [field]: value } : row))
 
   const addProximityRow = () => setProximityDiscounts(p => [...p, { days: '', percent: '' }])
   const removeProximityRow = (i: number) => setProximityDiscounts(p => p.filter((_, idx) => idx !== i))
@@ -75,8 +78,8 @@ export default function NewRatePlanPage() {
     if (!name.trim()) newErrors.name = 'El nombre es obligatorio'
     if (hasMinNights && (!minNights || parseInt(minNights) < 1))
       newErrors.minNights = 'Indica la cantidad mínima de noches'
-    if (hasStayDiscount && !stayDiscountDuration)
-      newErrors.stayDiscountDuration = 'Seleccioná la duración de la estadía'
+    if (hasStayDiscount && stayDiscounts.every(r => !r.duration))
+      newErrors.stayDiscounts = 'Seleccioná al menos una duración de estadía'
     setErrors(newErrors)
     if (Object.keys(newErrors).length > 0) return
 
@@ -88,13 +91,12 @@ export default function NewRatePlanPage() {
         description: description.trim(),
         hasMinNights,
         minNights: hasMinNights ? parseInt(minNights) : 0,
-        hasPerDayPricing,
-        perDayPrices,
+        hasPerDayNights,
+        perDayNights,
         priceVariation,
         priceVariationType,
         hasStayDiscount,
-        stayDiscountDuration,
-        stayDiscountPercent,
+        stayDiscounts: stayDiscounts.filter(r => r.duration || r.percent),
         proximityDiscounts: proximityDiscounts.filter(r => r.days || r.percent),
         weekendSurcharge,
         createdAt: new Date().toISOString(),
@@ -187,26 +189,32 @@ export default function NewRatePlanPage() {
             {/* Según día */}
             <div>
               <div className="flex items-center gap-3">
-                <Toggle enabled={hasPerDayPricing} onChange={() => setHasPerDayPricing(v => !v)} />
+                <Toggle enabled={hasPerDayNights} onChange={() => setHasPerDayNights(v => !v)} />
                 <span className="text-sm font-medium text-gray-700">Según día</span>
               </div>
-              {hasPerDayPricing && (
-                <div className="mt-4 space-y-2">
-                  {DAYS.map(day => (
-                    <div key={day} className="flex items-center gap-3">
-                      <span className="w-28 text-center text-xs font-semibold text-gray-600 bg-gray-100 border border-gray-300 rounded px-2 py-1.5">
-                        {day}
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={perDayPrices[day]}
-                        onChange={e => setPerDayPrices(p => ({ ...p, [day]: e.target.value }))}
-                        className="w-32 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-black focus:border-indigo-500 focus:ring-indigo-500"
-                        placeholder="Precio"
-                      />
-                    </div>
-                  ))}
+              {hasPerDayNights && (
+                <div className="mt-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="w-28" />
+                    <span className="text-xs font-medium text-gray-500">Cant. de noches</span>
+                  </div>
+                  <div className="space-y-2">
+                    {DAYS.map(day => (
+                      <div key={day} className="flex items-center gap-3">
+                        <span className="w-28 text-center text-xs font-semibold text-gray-600 bg-gray-100 border border-gray-300 rounded px-2 py-1.5">
+                          {day}
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={perDayNights[day]}
+                          onChange={e => setPerDayNights(p => ({ ...p, [day]: e.target.value }))}
+                          className="w-32 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-black focus:border-indigo-500 focus:ring-indigo-500"
+                          placeholder="Cant. de noches"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -258,33 +266,46 @@ export default function NewRatePlanPage() {
                 <span className="text-sm font-medium text-gray-700">Descuento según la duración de la estadía</span>
               </div>
               {hasStayDiscount && (
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <select
-                      value={stayDiscountDuration}
-                      onChange={e => { setStayDiscountDuration(e.target.value); if (errors.stayDiscountDuration) setErrors(p => ({ ...p, stayDiscountDuration: '' })) }}
-                      className="rounded-md border border-gray-300 px-3 py-2 text-sm text-black focus:border-indigo-500 focus:ring-indigo-500 w-56"
-                    >
-                      <option value="">Seleccionar duración de la estadía</option>
-                      {STAY_DURATIONS.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                    {errors.stayDiscountDuration && <p className="mt-1 text-sm text-red-600">{errors.stayDiscountDuration}</p>}
+                <div className="mt-4">
+                  <div className="space-y-2">
+                    {stayDiscounts.map((row, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <select
+                          value={row.duration}
+                          onChange={e => { updateStayDiscountRow(i, 'duration', e.target.value); if (errors.stayDiscounts) setErrors(p => ({ ...p, stayDiscounts: '' })) }}
+                          className="rounded-md border border-gray-300 px-3 py-2 text-sm text-black focus:border-indigo-500 focus:ring-indigo-500 w-56"
+                        >
+                          <option value="">Seleccionar duración de la estadía</option>
+                          {STAY_DURATIONS.map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                        <div className="relative w-28">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={row.percent}
+                            onChange={e => updateStayDiscountRow(i, 'percent', e.target.value)}
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 pr-7 text-sm text-black focus:border-indigo-500 focus:ring-indigo-500"
+                            placeholder="0"
+                          />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                        </div>
+                        {stayDiscounts.length > 1 && (
+                          <button type="button" onClick={() => removeStayDiscountRow(i)} className="text-red-500 hover:text-red-700">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  <div>
-                    <label className="block text-sm text-gray-700 mb-1">Descuento por (selección de la duración de la estadía)</label>
-                    <div className="relative w-40">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={stayDiscountPercent}
-                        onChange={e => setStayDiscountPercent(e.target.value)}
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 pr-7 text-sm text-black focus:border-indigo-500 focus:ring-indigo-500"
-                        placeholder="0"
-                      />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
-                    </div>
-                  </div>
+                  {errors.stayDiscounts && <p className="mt-1 text-sm text-red-600">{errors.stayDiscounts}</p>}
+                  <button
+                    type="button"
+                    onClick={addStayDiscountRow}
+                    className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 mt-2"
+                  >
+                    <Plus className="h-4 w-4" /> Agregar fila
+                  </button>
                 </div>
               )}
             </div>

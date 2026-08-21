@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Search, X, Save, Check, CalendarRange } from 'lucide-react'
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Search, X, Save } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import { loadProperties, Property } from '@/lib/properties'
@@ -12,7 +12,11 @@ import {
   RatePlan,
   RatesMap,
   RateEntry,
+  AvailabilityStatus,
+  AVAILABILITY_OPTIONS,
   getEntry,
+  getEntryStatus,
+  getPlanColor,
   setEntryForDates,
   dateKey,
   addDays,
@@ -20,10 +24,30 @@ import {
   MONTH_NAMES,
 } from '@/lib/rates'
 
-const WINDOW_DAYS = 14 // días visibles en la grilla
+const WINDOW_DAYS = 14 // días visibles en la vista compacta
+
+// 'month' = todos los días del mes (por defecto). 'window' = ventana corta de 14 días.
+type CalendarView = 'month' | 'window'
 
 // Orden Dom..Sáb, igual que Date.getDay() (0 = domingo)
 const WEEKDAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+
+// Tope defensivo por si se tipea un año absurdo en el input de fecha.
+const MAX_RANGE_DAYS = 366
+
+// Formatea una dateKey ("YYYY-MM-DD") para mostrar, sin pasar por UTC (evita corrimientos de día).
+function formatDateKey(key: string) {
+  const [, month, day] = key.split('-').map(Number)
+  return `${String(day).padStart(2, '0')} ${MONTH_NAMES[month - 1].slice(0, 3)}`
+}
+
+// Parsea un "YYYY-MM-DD" (de un <input type="date">) como fecha LOCAL.
+// `new Date("YYYY-MM-DD")` lo interpreta como medianoche UTC, que en husos horarios
+// detrás de UTC (ej. Argentina, UTC-3) cae en el día anterior al leerlo en hora local.
+function parseDateKey(key: string) {
+  const [year, month, day] = key.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
 
 export default function RatesCalendarPage() {
   const [loading, setLoading] = useState(true)
@@ -35,22 +59,18 @@ export default function RatesCalendarPage() {
 
   // Inicio de la ventana visible
   const [startDate, setStartDate] = useState<Date>(() => new Date())
+  const [view, setView] = useState<CalendarView>('month')
 
-  // Panel de edición
-  const [panel, setPanel] = useState<null | { property: Property; dates: string[] }>(null)
-  const [pAvailable, setPAvailable] = useState(true)
+  // Panel de edición: se abre al clickear una fecha y contiene todo (rango, días obviados,
+  // disponibilidad, precio y planes).
+  const [panel, setPanel] = useState<null | { property: Property; from: string; to: string }>(null)
+  const [pStatus, setPStatus] = useState<AvailabilityStatus>('abierto')
   const [pPrice, setPPrice] = useState('')
   const [pPlans, setPPlans] = useState<string[]>([])
-
-  // Selección de fechas (posiblemente salteadas) para una propiedad, antes de abrir el panel.
-  const [selectedDates, setSelectedDates] = useState<null | { property: Property; keys: string[] }>(null)
-
-  // Selección avanzada de fechas (estilo Booking): rango + filtro por día de la semana.
-  const [showAdvancedPicker, setShowAdvancedPicker] = useState(false)
-  const [advPropertyId, setAdvPropertyId] = useState('')
-  const [advFrom, setAdvFrom] = useState('')
-  const [advTo, setAdvTo] = useState('')
-  const [advWeekdays, setAdvWeekdays] = useState<boolean[]>([true, true, true, true, true, true, true])
+  // Días de la semana obviados (true = se saltea ese día dentro del rango). Índice = Date.getDay().
+  const [skipWeekdays, setSkipWeekdays] = useState<boolean[]>(Array(7).fill(false))
+  // Fechas puntuales quitadas a mano desde los chips.
+  const [excludedDates, setExcludedDates] = useState<string[]>([])
 
   useEffect(() => {
     setProperties(loadProperties().filter(p => !p.eliminado && (p.category || 'alojamiento') === 'alojamiento'))
@@ -59,13 +79,38 @@ export default function RatesCalendarPage() {
     setLoading(false)
   }, [])
 
-  const days = useMemo(() => Array.from({ length: WINDOW_DAYS }, (_, i) => addDays(startDate, i)), [startDate])
+  const days = useMemo(() => {
+    if (view === 'month') {
+      const year = startDate.getFullYear()
+      const month = startDate.getMonth()
+      // Día 0 del mes siguiente = último día de este mes.
+      const total = new Date(year, month + 1, 0).getDate()
+      return Array.from({ length: total }, (_, i) => new Date(year, month, i + 1))
+    }
+    return Array.from({ length: WINDOW_DAYS }, (_, i) => addDays(startDate, i))
+  }, [startDate, view])
+
+  // Celdas de la grilla mensual: se rellena con null al principio y al final para que
+  // cada día caiga en su columna (Dom..Sáb) y las semanas queden alineadas en filas.
+  const monthCells = useMemo(() => {
+    const year = startDate.getFullYear()
+    const month = startDate.getMonth()
+    const total = new Date(year, month + 1, 0).getDate()
+    const lead = new Date(year, month, 1).getDay()
+    const cells: (Date | null)[] = Array(lead).fill(null)
+    for (let d = 1; d <= total; d++) cells.push(new Date(year, month, d))
+    while (cells.length % 7 !== 0) cells.push(null)
+    return cells
+  }, [startDate])
 
   const filteredProps = properties.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
 
   const goToday = () => setStartDate(new Date())
-  const prevWeek = () => setStartDate(d => addDays(d, -7))
-  const nextWeek = () => setStartDate(d => addDays(d, 7))
+  // En vista de mes se navega de mes en mes; en la compacta, de semana en semana.
+  const prevPeriod = () => setStartDate(d =>
+    view === 'month' ? new Date(d.getFullYear(), d.getMonth() - 1, 1) : addDays(d, -7))
+  const nextPeriod = () => setStartDate(d =>
+    view === 'month' ? new Date(d.getFullYear(), d.getMonth() + 1, 1) : addDays(d, 7))
 
   const onMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const [year, month] = e.target.value.split('-').map(Number)
@@ -82,71 +127,59 @@ export default function RatesCalendarPage() {
     })
   }, [])
 
-  // Click en una celda: suma/saca esa fecha de la selección (permite fechas salteadas).
-  const toggleDateSelection = (property: Property, day: Date) => {
-    if (panel) return // no tocar la selección mientras el panel está abierto
-    const key = dateKey(day)
-    setSelectedDates(prev => {
-      if (!prev || String(prev.property.id) !== String(property.id)) {
-        return { property, keys: [key] }
-      }
-      const keys = prev.keys.includes(key) ? prev.keys.filter(k => k !== key) : [...prev.keys, key]
-      return keys.length === 0 ? null : { ...prev, keys }
-    })
-  }
-
-  const cancelSelection = () => setSelectedDates(null)
-
-  const toggleAdvWeekday = (i: number) => {
-    setAdvWeekdays(prev => prev.map((v, idx) => (idx === i ? !v : v)))
-  }
-
-  const openAdvancedPicker = () => {
-    setAdvPropertyId('')
-    setAdvFrom('')
-    setAdvTo('')
-    setAdvWeekdays([true, true, true, true, true, true, true])
-    setShowAdvancedPicker(true)
-  }
-
-  // Rango "Desde/Hasta" + filtro por día de la semana (estilo Booking) → arma la selección salteada.
-  const canApplyAdvancedPicker = advPropertyId && advFrom && advTo && advWeekdays.some(Boolean)
-
-  const applyAdvancedPicker = () => {
-    if (!canApplyAdvancedPicker) return
-    const property = properties.find(p => String(p.id) === advPropertyId)
-    if (!property) return
-    const from = parseDateKey(advFrom)
-    const to = parseDateKey(advTo)
-    const start = from <= to ? from : to
-    const end = from <= to ? to : from
+  // Fechas finales sobre las que se aplica el cambio: el rango completo, menos los días de la
+  // semana obviados, menos las fechas quitadas a mano.
+  const panelDates = useMemo(() => {
+    if (!panel || !panel.from || !panel.to) return []
+    const a = parseDateKey(panel.from)
+    const b = parseDateKey(panel.to)
+    if (isNaN(a.getTime()) || isNaN(b.getTime())) return []
+    const start = a <= b ? a : b
+    const end = a <= b ? b : a
     const keys: string[] = []
-    for (let d = new Date(start); d <= end; d = addDays(d, 1)) {
-      if (advWeekdays[d.getDay()]) keys.push(dateKey(d))
+    for (let d = new Date(start); d <= end && keys.length < MAX_RANGE_DAYS; d = addDays(d, 1)) {
+      if (skipWeekdays[d.getDay()]) continue
+      const key = dateKey(d)
+      if (excludedDates.includes(key)) continue
+      keys.push(key)
     }
-    if (keys.length === 0) return
-    setSelectedDates({ property, keys })
-    setShowAdvancedPicker(false)
-  }
+    return keys
+  }, [panel, skipWeekdays, excludedDates])
 
-  // Abre el panel de edición con exactamente las fechas elegidas (contiguas o no).
-  const applySelection = () => {
-    if (!selectedDates || selectedDates.keys.length === 0) return
-    const { property } = selectedDates
-    const keys = [...selectedDates.keys].sort()
-    const existing = getEntry(rates, String(property.id), keys[0])
-    setPanel({ property, dates: keys })
-    setPAvailable(existing ? existing.available : true)
+  // Click en una celda: abre el panel con esa fecha como rango inicial (desde = hasta).
+  const openPanel = (property: Property, day: Date) => {
+    const key = dateKey(day)
+    const existing = getEntry(rates, String(property.id), key)
+    setPanel({ property, from: key, to: key })
+    setSkipWeekdays(Array(7).fill(false))
+    setExcludedDates([])
+    setPStatus(existing ? getEntryStatus(existing) : 'abierto')
     setPPrice(existing && existing.price ? String(existing.price) : '')
     setPPlans(existing ? existing.planIds : [])
-    setSelectedDates(null)
   }
 
-  const removeDateFromPanel = (key: string) => {
-    setPanel(prev => (prev ? { ...prev, dates: prev.dates.filter(k => k !== key) } : prev))
+  // Click normal: abre el panel en esa fecha. Shift+click: extiende el rango desde la
+  // fecha ancla (`from`) hasta la clickeada, siempre dentro de la misma propiedad.
+  const handleCellClick = (property: Property, day: Date, shiftKey: boolean) => {
+    if (shiftKey && panel && String(panel.property.id) === String(property.id)) {
+      const key = dateKey(day)
+      const anchor = panel.from
+      // Las dateKeys "YYYY-MM-DD" ordenan igual como texto que cronológicamente.
+      const [from, to] = anchor <= key ? [anchor, key] : [key, anchor]
+      setPanel({ property, from, to })
+      setExcludedDates([])
+      return
+    }
+    openPanel(property, day)
   }
 
   const closePanel = () => setPanel(null)
+
+  const toggleSkipWeekday = (i: number) => {
+    setSkipWeekdays(prev => prev.map((v, idx) => (idx === i ? !v : v)))
+  }
+
+  const excludeDate = (key: string) => setExcludedDates(prev => [...prev, key])
 
   const togglePanelPlan = (id: string) => {
     setPPlans(prev => (prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]))
@@ -157,33 +190,54 @@ export default function RatesCalendarPage() {
   const savingPanelRef = useRef(false)
 
   const savePanel = () => {
-    if (!panel || panel.dates.length === 0 || savingPanelRef.current) return
+    if (!panel || panelDates.length === 0 || savingPanelRef.current) return
     savingPanelRef.current = true
 
     const entry: RateEntry = {
       price: parseFloat(pPrice) || 0,
-      available: pAvailable,
+      status: pStatus,
+      // Se mantiene sincronizado para no romper entradas leídas por código viejo.
+      available: pStatus === 'abierto',
+      ...(pStatus === 'cerrado24'
+        ? { closedUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }
+        : {}),
       planIds: pPlans,
     }
-    const updated = setEntryForDates(rates, String(panel.property.id), panel.dates, entry)
+    const updated = setEntryForDates(rates, String(panel.property.id), panelDates, entry)
     setRates(updated)
     saveRates(updated)
     closePanel()
     savingPanelRef.current = false
   }
 
-  // Formatea una dateKey ("YYYY-MM-DD") para mostrar, sin pasar por UTC (evita corrimientos de día).
-  const formatDateKey = (key: string) => {
-    const [, month, day] = key.split('-').map(Number)
-    return `${String(day).padStart(2, '0')} ${MONTH_NAMES[month - 1].slice(0, 3)}`
+  // Franja de color de una celda: un color por plan aplicado, repartidos en partes
+  // iguales (2 planes = mitad y mitad, 3 = tercios, etc.).
+  const planStripe = (planIds: string[]): string | undefined => {
+    const colors = planIds
+      .map(id => plans.find(pl => pl.id === id))
+      .filter((pl): pl is RatePlan => Boolean(pl))
+      .map(getPlanColor)
+    if (colors.length === 0) return undefined
+    if (colors.length === 1) return colors[0]
+    const step = 100 / colors.length
+    const stops = colors.map((c, i) => `${c} ${i * step}% ${(i + 1) * step}%`).join(', ')
+    return `linear-gradient(90deg, ${stops})`
   }
 
-  // Parsea un "YYYY-MM-DD" (de un <input type="date">) como fecha LOCAL.
-  // `new Date("YYYY-MM-DD")` lo interpreta como medianoche UTC, que en husos horarios
-  // detrás de UTC (ej. Argentina, UTC-3) cae en el día anterior al leerlo en hora local.
-  const parseDateKey = (key: string) => {
-    const [year, month, day] = key.split('-').map(Number)
-    return new Date(year, month - 1, day)
+  // Datos de una celda (día + propiedad), compartidos por la vista mensual y la compacta.
+  const cellInfo = (property: Property, key: string) => {
+    const entry = getEntry(rates, String(property.id), key)
+    const status = entry ? getEntryStatus(entry) : 'abierto'
+    return {
+      entry,
+      status,
+      matchesPlan: !planFilter || (entry ? entry.planIds.includes(planFilter) : false),
+      inSelection: Boolean(panel && String(panel.property.id) === String(property.id) && panelDates.includes(key)),
+      stripe: entry ? planStripe(entry.planIds) : undefined,
+      planNames: entry
+        ? entry.planIds.map(id => plans.find(pl => pl.id === id)?.name).filter(Boolean).join(' + ')
+        : '',
+    }
   }
 
   const headerMonth = `${MONTH_NAMES[startDate.getMonth()]} de ${startDate.getFullYear()}`
@@ -204,6 +258,10 @@ export default function RatesCalendarPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar title="Tarifas y Disponibilidad - Check and Point" />
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Con el panel abierto se reserva el ancho del drawer para que la grilla siga
+            visible. Va en su propio wrapper: en el div de arriba, `lg:px-8` le ganaría
+            al padding derecho por el orden en que Tailwind emite las utilidades. */}
+        <div className={`transition-[padding] duration-200 ${panel ? 'md:pr-[29rem]' : ''}`}>
         <div className="flex items-center mb-6">
           <CalendarIcon className="h-8 w-8 text-indigo-600 mr-3" />
           <h1 className="text-3xl font-bold text-gray-900">Calendario</h1>
@@ -227,6 +285,27 @@ export default function RatesCalendarPage() {
           <button onClick={goToday} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
             HOY
           </button>
+          {/* Vista: mes completo (por defecto) o ventana compacta de 14 días */}
+          <div className="inline-flex rounded-md border border-gray-300 bg-white overflow-hidden">
+            <button
+              onClick={() => setView('month')}
+              aria-pressed={view === 'month'}
+              className={`px-3 py-2 text-sm font-medium ${
+                view === 'month' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Mes completo
+            </button>
+            <button
+              onClick={() => setView('window')}
+              aria-pressed={view === 'window'}
+              className={`px-3 py-2 text-sm font-medium border-l border-gray-300 ${
+                view === 'window' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              14 días
+            </button>
+          </div>
           <select
             value={planFilter}
             onChange={(e) => setPlanFilter(e.target.value)}
@@ -235,13 +314,24 @@ export default function RatesCalendarPage() {
             <option value="">Todos los planes de tarifa</option>
             {plans.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
           </select>
-          <button
-            onClick={openAdvancedPicker}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            <CalendarRange className="h-4 w-4 mr-2 text-gray-400" />
-            Selección avanzada de fechas
-          </button>
+        </div>
+
+        {/* Referencia de colores + ayuda de selección */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 text-xs text-gray-500">
+          <span>
+            <kbd className="px-1.5 py-0.5 rounded border border-gray-300 bg-gray-50 font-sans text-gray-700">Shift</kbd>
+            {' '}+ click para seleccionar un rango de fechas
+          </span>
+          {plans.length > 0 && (
+            <span className="flex flex-wrap items-center gap-3">
+              {plans.map(pl => (
+                <span key={pl.id} className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: getPlanColor(pl) }} />
+                  {pl.name}
+                </span>
+              ))}
+            </span>
+          )}
         </div>
 
         <div className="flex gap-4">
@@ -263,23 +353,87 @@ export default function RatesCalendarPage() {
           </div>
 
           {/* Grilla */}
-          <div className="flex-1 overflow-x-auto">
+          <div className={`flex-1 min-w-0 ${view === 'month' ? '' : 'overflow-x-auto'}`}>
             <div className="border border-gray-300 rounded-lg overflow-hidden bg-white">
-              {/* Barra de mes con navegación de semana */}
+              {/* Barra de mes con navegación */}
               <div className="flex items-center justify-between bg-gray-50 border-b border-gray-300 px-4 py-2">
-                <button onClick={prevWeek} className="p-1 rounded hover:bg-gray-200" title="Semana anterior">
+                <button onClick={prevPeriod} className="p-1 rounded hover:bg-gray-200" title={view === 'month' ? 'Mes anterior' : 'Semana anterior'}>
                   <ChevronLeft className="h-5 w-5 text-gray-600" />
                 </button>
                 <span className="font-semibold text-gray-800">{headerMonth}</span>
-                <button onClick={nextWeek} className="p-1 rounded hover:bg-gray-200" title="Semana siguiente">
+                <button onClick={nextPeriod} className="p-1 rounded hover:bg-gray-200" title={view === 'month' ? 'Mes siguiente' : 'Semana siguiente'}>
                   <ChevronRight className="h-5 w-5 text-gray-600" />
                 </button>
               </div>
 
+              {view === 'month' ? (
+                /* Vista mensual: semanas hacia abajo, una grilla por propiedad. */
+                filteredProps.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-sm text-gray-500">
+                    No hay propiedades. <Link href="/units/new?category=alojamiento" className="text-indigo-600 underline">Crear una</Link>.
+                  </div>
+                ) : (
+                  filteredProps.map(p => (
+                    <div key={p.id} className="border-b border-gray-200 last:border-b-0">
+                      <div className="px-4 py-2 text-sm font-medium text-gray-800 bg-gray-50/70 border-b border-gray-200">
+                        {p.name}
+                      </div>
+                      <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
+                        {WEEKDAY_LABELS.map(l => (
+                          <div key={l} className="px-2 py-1.5 text-center text-xs font-medium text-gray-500">{l}</div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-7">
+                        {monthCells.map((d, i) => {
+                          if (!d) {
+                            return <div key={`empty-${i}`} className="min-h-[4.5rem] border-r border-b border-gray-100 bg-gray-50/40" />
+                          }
+                          const key = dateKey(d)
+                          const { entry, status, matchesPlan, inSelection, stripe, planNames } = cellInfo(p, key)
+                          return (
+                            <div
+                              key={key}
+                              onClick={(e) => handleCellClick(p, d, e.shiftKey)}
+                              title="Click para editar · Shift + click para seleccionar un rango"
+                              className={`relative min-h-[4.5rem] border-r border-b border-gray-100 px-2 pt-1.5 pb-3 text-xs cursor-pointer select-none hover:bg-indigo-50 ${
+                                status === 'cerrado' ? 'bg-red-50' : status === 'cerrado24' ? 'bg-amber-50' : ''
+                              } ${!matchesPlan ? 'opacity-30' : ''} ${
+                                inSelection ? 'bg-indigo-100 ring-2 ring-inset ring-indigo-500' : ''
+                              }`}
+                            >
+                              <div className={`text-[11px] font-semibold ${isToday(d) ? 'text-indigo-600' : 'text-gray-400'}`}>
+                                {d.getDate()}
+                              </div>
+                              <div className="mt-1 text-center">
+                                {status === 'cerrado' ? (
+                                  <span className="text-red-600 font-medium">Cerrado</span>
+                                ) : status === 'cerrado24' ? (
+                                  <span className="text-amber-600 font-medium">Cerrado 24hs</span>
+                                ) : entry && entry.price ? (
+                                  <span className="text-gray-800 font-medium">${entry.price.toLocaleString('es-AR')}</span>
+                                ) : (
+                                  <span className="text-gray-400">Precio x noche</span>
+                                )}
+                              </div>
+                              {stripe && (
+                                <span
+                                  className="absolute bottom-0 left-0 right-0 h-1.5"
+                                  style={{ background: stripe }}
+                                  title={planNames}
+                                />
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))
+                )
+              ) : (
               <table className="border-collapse">
                 <thead>
                   <tr>
-                    <th className="w-40 min-w-40 sticky left-0 bg-white border-r border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-500">
+                    <th className="w-40 min-w-40 sticky left-0 z-10 bg-white border-r border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-500">
                       Propiedad
                     </th>
                     {days.map(d => (
@@ -293,42 +447,46 @@ export default function RatesCalendarPage() {
                 <tbody>
                   {filteredProps.length === 0 ? (
                     <tr>
-                      <td colSpan={WINDOW_DAYS + 1} className="px-4 py-8 text-center text-sm text-gray-500">
+                      <td colSpan={days.length + 1} className="px-4 py-8 text-center text-sm text-gray-500">
                         No hay propiedades. <Link href="/units/new?category=alojamiento" className="text-indigo-600 underline">Crear una</Link>.
                       </td>
                     </tr>
                   ) : (
                     filteredProps.map(p => (
                       <tr key={p.id} className="border-t border-gray-200">
-                        <td className="sticky left-0 bg-white border-r border-gray-300 px-3 py-3 text-sm font-medium text-gray-800 truncate">
+                        <td className="sticky left-0 z-10 bg-white border-r border-gray-300 px-3 py-3 text-sm font-medium text-gray-800 truncate">
                           {p.name}
                         </td>
                         {days.map(d => {
                           const key = dateKey(d)
-                          const entry = getEntry(rates, String(p.id), key)
-                          const blocked = entry && !entry.available
-                          const matchesPlan = !planFilter || (entry ? entry.planIds.includes(planFilter) : false)
-                          const selected = selectedDates && String(selectedDates.property.id) === String(p.id) && selectedDates.keys.includes(key)
+                          // `inSelection` resalta las fechas que va a afectar el panel abierto.
+                          const { entry, status, matchesPlan, inSelection, stripe, planNames } = cellInfo(p, key)
                           return (
                             <td
                               key={key}
-                              onClick={() => toggleDateSelection(p, d)}
-                              className={`relative w-24 min-w-24 border-r border-gray-100 px-1 py-3 text-center text-xs cursor-pointer hover:bg-indigo-50 ${
-                                blocked ? 'bg-red-50' : ''
+                              onClick={(e) => handleCellClick(p, d, e.shiftKey)}
+                              className={`relative w-24 min-w-24 border-r border-gray-100 px-1 py-3 pb-4 text-center text-xs cursor-pointer select-none hover:bg-indigo-50 ${
+                                status === 'cerrado' ? 'bg-red-50' : status === 'cerrado24' ? 'bg-amber-50' : ''
                               } ${!matchesPlan ? 'opacity-30' : ''} ${
-                                selected ? 'bg-indigo-100 ring-2 ring-inset ring-indigo-500' : ''
+                                inSelection ? 'bg-indigo-100 ring-2 ring-inset ring-indigo-500' : ''
                               }`}
-                              title="Click para seleccionar (podés elegir varias fechas salteadas)"
+                              title="Click para editar · Shift + click para seleccionar un rango"
                             >
-                              {selected && (
-                                <Check className="h-3.5 w-3.5 text-indigo-600 absolute top-1 right-1" />
-                              )}
-                              {blocked ? (
-                                <span className="text-red-600 font-medium">Bloqueado</span>
+                              {status === 'cerrado' ? (
+                                <span className="text-red-600 font-medium">Cerrado</span>
+                              ) : status === 'cerrado24' ? (
+                                <span className="text-amber-600 font-medium">Cerrado 24hs</span>
                               ) : entry && entry.price ? (
                                 <span className="text-gray-800 font-medium">${entry.price.toLocaleString('es-AR')}</span>
                               ) : (
                                 <span className="text-gray-400">Precio x noche</span>
+                              )}
+                              {stripe && (
+                                <span
+                                  className="absolute bottom-0 left-0 right-0 h-1.5"
+                                  style={{ background: stripe }}
+                                  title={planNames}
+                                />
                               )}
                             </td>
                           )
@@ -338,104 +496,19 @@ export default function RatesCalendarPage() {
                   )}
                 </tbody>
               </table>
+              )}
             </div>
           </div>
+        </div>
         </div>
       </div>
 
-      {/* Selección avanzada de fechas: rango + días de la semana (estilo Booking) */}
-      {showAdvancedPicker && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/30" onClick={() => setShowAdvancedPicker(false)} />
-          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-medium text-gray-900">Selección avanzada de fechas</h3>
-              <button onClick={() => setShowAdvancedPicker(false)} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Propiedad</label>
-                <select
-                  value={advPropertyId}
-                  onChange={(e) => setAdvPropertyId(e.target.value)}
-                  className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm text-black"
-                >
-                  <option value="">Seleccionar propiedad</option>
-                  {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha inicial</label>
-                  <input type="date" value={advFrom} onChange={(e) => setAdvFrom(e.target.value)} className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm text-black" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha final</label>
-                  <input type="date" value={advTo} onChange={(e) => setAdvTo(e.target.value)} className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm text-black" />
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">¿A qué días de la semana querés aplicarles los cambios?</p>
-                <div className="flex flex-wrap gap-3">
-                  {WEEKDAY_LABELS.map((label, i) => (
-                    <label key={label} className="inline-flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={advWeekdays[i]}
-                        onChange={() => toggleAdvWeekday(i)}
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-1.5"
-                      />
-                      <span className="text-sm text-gray-700">{label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={() => setShowAdvancedPicker(false)}
-                className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={applyAdvancedPicker}
-                disabled={!canApplyAdvancedPicker}
-                className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Seleccionar fechas
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Barra flotante: aparece mientras hay fechas seleccionadas (pueden ser salteadas) */}
-      {selectedDates && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-4 bg-white border border-gray-200 rounded-full shadow-lg px-5 py-3">
-          <span className="text-sm text-gray-700">
-            <span className="font-medium text-gray-900">{selectedDates.property.name}</span> · {selectedDates.keys.length} fecha{selectedDates.keys.length === 1 ? '' : 's'} seleccionada{selectedDates.keys.length === 1 ? '' : 's'}
-          </span>
-          <button onClick={cancelSelection} className="text-sm font-medium text-gray-500 hover:text-gray-700">
-            Cancelar
-          </button>
-          <button onClick={applySelection} className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-            Aplicar
-          </button>
-        </div>
-      )}
-
-      {/* Panel de edición de precio/disponibilidad (clic en celda) */}
+      {/* Panel de edición: rango de fechas + días obviados + disponibilidad/precio/planes.
+          Sin fondo oscuro y con pointer-events acotados al drawer: la grilla queda usable
+          mientras el panel está abierto, que es lo que permite el Shift + click para el rango. */}
       {panel && (
-        <div className="fixed inset-0 z-20 flex justify-end">
-          <div className="absolute inset-0 bg-black/30" onClick={closePanel} />
-          <div className="relative w-full max-w-md bg-white h-full shadow-xl overflow-y-auto p-6">
+        <div className="fixed inset-0 z-20 flex justify-end pointer-events-none">
+          <div className="pointer-events-auto relative w-full max-w-md bg-white h-full shadow-2xl border-l border-gray-200 overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-6">
               <button onClick={closePanel} className="text-gray-400 hover:text-gray-600">
                 <X className="h-6 w-6" />
@@ -444,55 +517,144 @@ export default function RatesCalendarPage() {
             </div>
 
             <div className="space-y-6">
-              {/* Fechas seleccionadas (pueden ser salteadas, no necesariamente un rango) */}
+              {/* Rango de fechas */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-1">Rango de fechas</h4>
+                <p className="text-xs text-gray-500 mb-2">
+                  <kbd className="px-1.5 py-0.5 rounded border border-gray-300 bg-gray-50 font-sans text-gray-700">Shift</kbd>
+                  {' '}+ click en el calendario para extender el rango.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Desde</label>
+                    <input
+                      type="date"
+                      value={panel.from}
+                      onChange={(e) => setPanel(prev => prev && ({ ...prev, from: e.target.value }))}
+                      className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm text-black"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Hasta</label>
+                    <input
+                      type="date"
+                      value={panel.to}
+                      onChange={(e) => setPanel(prev => prev && ({ ...prev, to: e.target.value }))}
+                      className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm text-black"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Días obviados: un botón por día de la semana */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-1">Obviar días</h4>
+                <p className="text-xs text-gray-500 mb-2">
+                  Tocá un día para saltearlo. Ej: al obviar Vie, todos los viernes del rango quedan sin cambios.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {WEEKDAY_LABELS.map((label, i) => {
+                    const skipped = skipWeekdays[i]
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => toggleSkipWeekday(i)}
+                        aria-pressed={skipped}
+                        className={`px-3 py-1.5 rounded-md border text-sm font-medium transition-colors ${
+                          skipped
+                            ? 'bg-gray-100 border-gray-200 text-gray-400 line-through'
+                            : 'bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700'
+                        }`}
+                        title={skipped ? `${label} obviado — tocá para incluirlo` : `Tocá para obviar los ${label}`}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Fechas resultantes */}
               <div>
                 <h4 className="text-sm font-medium text-gray-900 mb-2">
-                  Fechas seleccionadas ({panel.dates.length})
+                  Fechas a modificar ({panelDates.length})
                 </h4>
-                <div className="flex flex-wrap gap-2">
-                  {panel.dates.map(key => (
-                    <span key={key} className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full pl-3 pr-1.5 py-1">
-                      {formatDateKey(key)}
-                      <button
-                        type="button"
-                        onClick={() => removeDateFromPanel(key)}
-                        className="rounded-full hover:bg-indigo-200 p-0.5"
-                        title="Quitar fecha"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                {panel.dates.length === 0 && (
-                  <p className="text-sm text-red-600 mt-1">Quitaste todas las fechas — seleccioná al menos una para guardar.</p>
+                {panelDates.length === 0 ? (
+                  <p className="text-sm text-red-600">
+                    No queda ninguna fecha seleccionada — revisá el rango o los días obviados.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                    {panelDates.map(key => (
+                      <span key={key} className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full pl-3 pr-1.5 py-1">
+                        {formatDateKey(key)}
+                        <button
+                          type="button"
+                          onClick={() => excludeDate(key)}
+                          className="rounded-full hover:bg-indigo-200 p-0.5"
+                          title="Quitar fecha"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
 
-              {/* Disponibilidad */}
+              {/* Disponibilidad: abrir / cerrar / cerrar por 24hs */}
               <div>
                 <h4 className="text-sm font-medium text-gray-900 mb-2">Disponibilidad</h4>
-                <div className="flex items-center space-x-6">
-                  <label className="inline-flex items-center">
-                    <input type="radio" name="avail" checked={pAvailable} onChange={() => setPAvailable(true)} className="h-4 w-4 text-indigo-600 border-gray-300" />
-                    <span className="ml-2 text-sm text-gray-700">Disponible</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="radio" name="avail" checked={!pAvailable} onChange={() => setPAvailable(false)} className="h-4 w-4 text-indigo-600 border-gray-300" />
-                    <span className="ml-2 text-sm text-gray-700">Bloqueado</span>
-                  </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {AVAILABILITY_OPTIONS.map(opt => {
+                    const active = pStatus === opt.id
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setPStatus(opt.id)}
+                        aria-pressed={active}
+                        className={`px-2 py-2 rounded-md border text-sm font-medium transition-colors ${
+                          active
+                            ? opt.id === 'abierto'
+                              ? 'bg-green-600 border-green-600 text-white'
+                              : 'bg-red-600 border-red-600 text-white'
+                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {opt.name}
+                      </button>
+                    )
+                  })}
                 </div>
+                {pStatus === 'cerrado24' && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    Se reabre automáticamente 24hs después de guardar.
+                  </p>
+                )}
               </div>
 
               {/* Precio por noche */}
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">Precio por noche</label>
-                <input type="number" min="0" value={pPrice} onChange={(e) => setPPrice(e.target.value)} disabled={!pAvailable} className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm text-black disabled:bg-gray-100" placeholder="Precio por noche" />
+                <input
+                  type="number"
+                  min="0"
+                  value={pPrice}
+                  onChange={(e) => setPPrice(e.target.value)}
+                  disabled={pStatus === 'cerrado'}
+                  className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm text-black disabled:bg-gray-100"
+                  placeholder="Precio por noche"
+                />
               </div>
 
-              {/* Planes de Tarifa (multiselección) */}
+              {/* Planes de Tarifa (se puede aplicar más de uno) */}
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Planes de Tarifa</label>
+                <label className="block text-sm font-medium text-gray-900 mb-1">
+                  Planes de Tarifa {pPlans.length > 0 && <span className="text-indigo-600">({pPlans.length})</span>}
+                </label>
+                <p className="text-xs text-gray-500 mb-2">Podés aplicar más de un plan a la vez.</p>
                 {plans.length === 0 ? (
                   <p className="text-sm text-gray-500">
                     No hay planes creados. <Link href="/rates/plans" className="text-indigo-600 underline">Crear planes</Link>.
@@ -500,7 +662,7 @@ export default function RatesCalendarPage() {
                 ) : (
                   <div className="space-y-2 border border-gray-200 rounded-md p-3 max-h-40 overflow-y-auto">
                     {plans.map(pl => (
-                      <label key={pl.id} className="flex items-center">
+                      <label key={pl.id} className="flex items-center cursor-pointer">
                         <input type="checkbox" checked={pPlans.includes(pl.id)} onChange={() => togglePanelPlan(pl.id)} className="h-4 w-4 text-indigo-600 border-gray-300 rounded" />
                         <span className="ml-2 text-sm text-gray-700">{pl.name}</span>
                       </label>
@@ -511,7 +673,7 @@ export default function RatesCalendarPage() {
 
               <button
                 onClick={savePanel}
-                disabled={panel.dates.length === 0}
+                disabled={panelDates.length === 0}
                 className="w-full inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save className="h-5 w-5 mr-2" />

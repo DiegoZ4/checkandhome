@@ -118,7 +118,7 @@ export default function ReservationDetailPage() {
               <Field label="Apellido" value={r.lastName} />
               <Field label="Teléfono" value={r.phone} />
               <Field label="Tipo de documento" value={r.docType} />
-              <Field label="DNI" value={r.dni} />
+              <Field label="DNI" value={r.dni || (r.dniException ? 'No requerido (excepción autorizada por admin)' : '')} />
               <Field
                 label="Archivo adjunto"
                 value={
@@ -145,7 +145,10 @@ export default function ReservationDetailPage() {
               <Field label="Cargos (limpieza + servicio)" value={amount(r.cargos)} />
               <Field label="Total NETO" value={amount(r.totalNeto)} />
               <Field label="Total BRUTO" value={amount(r.totalBruto)} />
-              <Field label="Seña" value={`${r.senaPct}% (${amount(r.senaValue)})`} />
+              <Field
+                label="Seña"
+                value={r.senaException ? 'Sin seña (excepción autorizada por admin)' : `${r.senaPct}% (${amount(r.senaValue)})`}
+              />
               <Field label="Restante" value={amount(r.restante)} />
             </div>
           </Section>

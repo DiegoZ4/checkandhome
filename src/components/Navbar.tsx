@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
-  Menu, X, LogOut, Home, Users, Calendar, CalendarRange, Building2, BarChart3,
+  Menu, X, LogOut, Home, Users, Calendar, CalendarRange, Building2, BarChart3, ChevronRight,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -19,15 +19,43 @@ interface NavbarProps {
   showUserInfo?: boolean;
 }
 
-// Secciones del menú lateral (drawer).
+interface MenuChild {
+  label: string
+  href: string
+}
+
+// Secciones del menú lateral (drawer). Las que tienen `children` despliegan un
+// submenú al pasar el mouse, para entrar directo a las pantallas de adentro.
 // NOTA: secciones comentadas temporalmente para dejar la app al ~50%.
 // Para reactivarlas, descomentar las líneas correspondientes.
-const MENU_ITEMS = [
+const MENU_ITEMS: {
+  label: string
+  href: string
+  icon: typeof Home
+  children?: MenuChild[]
+}[] = [
   { label: 'Inicio', href: '/dashboard', icon: Home },
   { label: 'Usuarios', href: '/users', icon: Users },
   { label: 'Reservas', href: '/bookings', icon: Calendar },
-  { label: 'Tarifas y Disponibilidad', href: '/rates', icon: CalendarRange },
-  { label: 'Propiedades', href: '/units', icon: Building2 },
+  {
+    label: 'Tarifas y Disponibilidad',
+    href: '/rates',
+    icon: CalendarRange,
+    children: [
+      { label: 'Calendario', href: '/rates/calendar' },
+      { label: 'Planes de Tarifa', href: '/rates/plans' },
+      { label: 'Sincronizar Calendario', href: '/rates/sync' },
+    ],
+  },
+  {
+    label: 'Propiedades',
+    href: '/units',
+    icon: Building2,
+    children: [
+      { label: 'Alojamientos', href: '/units/list?category=alojamiento' },
+      { label: 'Cocheras', href: '/units/list?category=cochera' },
+    ],
+  },
   // { label: 'Cocheras', href: '/units/list?category=cochera', icon: Car },
   // { label: 'Administración', href: '/expenses', icon: Receipt },
   // { label: 'Compras', href: '/inventory', icon: Package },
@@ -41,6 +69,40 @@ export default function Navbar({ title = "Check and Point" }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+
+  // Submenú desplegable. Se posiciona con coordenadas fijas porque el <nav> tiene
+  // overflow-y-auto y recortaría un panel posicionado en absoluto.
+  const [submenu, setSubmenu] = useState<null | { label: string; top: number; left: number; items: MenuChild[] }>(null)
+  // Cierre diferido: da tiempo a mover el mouse desde el ítem hasta el panel sin que se cierre.
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const cancelClose = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+    closeTimer.current = null
+  }
+
+  const scheduleClose = () => {
+    cancelClose()
+    closeTimer.current = setTimeout(() => setSubmenu(null), 180)
+  }
+
+  const showSubmenu = (item: (typeof MENU_ITEMS)[number], el: HTMLElement) => {
+    if (!item.children) {
+      scheduleClose()
+      return
+    }
+    cancelClose()
+    const rect = el.getBoundingClientRect()
+    setSubmenu({ label: item.label, top: rect.top, left: rect.right + 8, items: item.children })
+  }
+
+  useEffect(() => cancelClose, [])
+
+  const closeMenu = () => {
+    cancelClose()
+    setSubmenu(null)
+    setMenuOpen(false)
+  }
 
   useEffect(() => {
     const checkAuth = () => {
@@ -134,11 +196,11 @@ export default function Navbar({ title = "Check and Point" }: NavbarProps) {
       {/* Drawer */}
       {menuOpen && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/30" onClick={() => setMenuOpen(false)} />
+          <div className="absolute inset-0 bg-black/30" onClick={closeMenu} />
           <aside className="absolute left-0 top-0 h-full w-72 bg-white shadow-xl flex flex-col">
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
               <h2 className="text-xl font-bold text-gray-900">Menú</h2>
-              <button onClick={() => setMenuOpen(false)} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar menú">
+              <button onClick={closeMenu} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar menú">
                 <X className="h-6 w-6" />
               </button>
             </div>
@@ -156,19 +218,28 @@ export default function Navbar({ title = "Check and Point" }: NavbarProps) {
                   ? pathname === '/dashboard'
                   : pathname.startsWith(item.href.split('?')[0])
                 const Icon = item.icon
+                const openHere = submenu?.label === item.label
                 return (
                   <Link
                     key={item.label}
                     href={item.href}
-                    onClick={() => setMenuOpen(false)}
+                    onClick={closeMenu}
+                    onMouseEnter={(e) => showSubmenu(item, e.currentTarget)}
+                    onMouseLeave={scheduleClose}
+                    onFocus={(e) => showSubmenu(item, e.currentTarget)}
                     className={`flex items-center px-4 py-2.5 rounded-md border text-sm font-medium transition-colors ${
                       active
                         ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                        : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                        : openHere
+                          ? 'border-gray-200 bg-gray-50 text-gray-700'
+                          : 'border-gray-200 text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     <Icon className="h-4 w-4 mr-3 flex-shrink-0" />
                     {item.label}
+                    {item.children && (
+                      <ChevronRight className="h-4 w-4 ml-auto flex-shrink-0 text-gray-400" />
+                    )}
                   </Link>
                 )
               })}
@@ -184,6 +255,29 @@ export default function Navbar({ title = "Check and Point" }: NavbarProps) {
               </button>
             </div>
           </aside>
+
+          {/* Submenú desplegable (fuera del <aside> para que el scroll del nav no lo recorte) */}
+          {submenu && (
+            <div
+              className="fixed z-[60] pl-2"
+              style={{ top: submenu.top, left: submenu.left - 8 }}
+              onMouseEnter={cancelClose}
+              onMouseLeave={scheduleClose}
+            >
+              <div className="w-60 rounded-md border border-gray-200 bg-white shadow-xl py-1">
+                {submenu.items.map(sub => (
+                  <Link
+                    key={sub.href}
+                    href={sub.href}
+                    onClick={closeMenu}
+                    className="block px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-indigo-50 hover:text-indigo-700"
+                  >
+                    {sub.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </>

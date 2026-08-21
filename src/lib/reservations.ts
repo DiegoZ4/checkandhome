@@ -62,8 +62,11 @@ export interface Reservation {
   dni: string
   hasAttachment: boolean
   attachmentName: string
-  // Confirmada sin DNI adjunto por excepción de un usuario admin (solo canales Directa/Booking).
+  // Sin DNI por excepción autorizada por un usuario admin (solo canales Directa/Booking).
   dniException: boolean
+  // Sin seña por excepción autorizada por un usuario admin (solo canales Directa/Booking;
+  // Airbnb nunca la pide, así que ahí no aplica).
+  senaException: boolean
 
   hasPaymentProof: boolean
   paymentProofName: string

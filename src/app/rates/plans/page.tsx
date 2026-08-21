@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { DollarSign, Plus, Trash2, ArrowLeft, Search, Edit } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
-import { loadRatePlans, saveRatePlans, RatePlan } from '@/lib/rates'
+import { loadRatePlans, saveRatePlans, RatePlan, getPlanColor } from '@/lib/rates'
 
 export default function RatePlansPage() {
   const [plans, setPlans] = useState<RatePlan[]>([])
@@ -109,7 +109,16 @@ export default function RatePlansPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filtered.map(p => (
                   <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-4 text-sm font-medium text-gray-900">{p.name}</td>
+                    <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className="h-3 w-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: getPlanColor(p) }}
+                          title="Color del plan en el calendario"
+                        />
+                        {p.name}
+                      </span>
+                    </td>
                     <td className="px-4 py-4 text-sm text-gray-600 max-w-md truncate">{p.description || '-'}</td>
                     <td className="px-4 py-4 text-sm text-gray-700">{p.hasMinNights ? `${p.minNights} noche(s)` : 'No'}</td>
                     <td className="px-4 py-4 text-right">

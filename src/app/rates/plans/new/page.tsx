@@ -5,7 +5,7 @@ import { DollarSign, ArrowLeft, Save, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import { loadRatePlans, saveRatePlans, RatePlan, ProximityDiscount, StayDiscount } from '@/lib/rates'
+import { loadRatePlans, saveRatePlans, RatePlan, ProximityDiscount, StayDiscount, PLAN_COLORS } from '@/lib/rates'
 
 const DAYS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO']
 
@@ -37,6 +37,7 @@ export default function NewRatePlanPage() {
   // Básicos
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [color, setColor] = useState(PLAN_COLORS[0])
 
   // Mínimo de noches
   const [hasMinNights, setHasMinNights] = useState(false)
@@ -89,6 +90,7 @@ export default function NewRatePlanPage() {
         id: String(Date.now()),
         name: name.trim(),
         description: description.trim(),
+        color,
         hasMinNights,
         minNights: hasMinNights ? parseInt(minNights) : 0,
         hasPerDayNights,
@@ -152,6 +154,24 @@ export default function NewRatePlanPage() {
                   placeholder="Ej: Tarifa estándar"
                 />
                 {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+
+                <label className="block text-sm font-medium text-gray-700 mb-1 mt-4">Color</label>
+                <p className="text-xs text-gray-500 mb-2">Identifica al plan en el calendario.</p>
+                <div className="flex flex-wrap gap-2">
+                  {PLAN_COLORS.map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setColor(c)}
+                      aria-label={`Color ${c}`}
+                      aria-pressed={color === c}
+                      style={{ backgroundColor: c }}
+                      className={`h-7 w-7 rounded-full transition-transform ${
+                        color === c ? 'ring-2 ring-offset-2 ring-gray-700 scale-110' : 'hover:scale-105'
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>

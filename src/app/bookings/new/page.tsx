@@ -71,6 +71,7 @@ function BookingForm() {
     status: 'PENDIENTE',
     observaciones: '',
     dniException: false,
+    senaException: false,
   })
   const [hasAttachment, setHasAttachment] = useState(false)
   const [attachmentName, setAttachmentName] = useState('')
@@ -115,6 +116,7 @@ function BookingForm() {
       status: found.status,
       observaciones: found.observaciones,
       dniException: found.dniException,
+      senaException: found.senaException,
     })
     setHasAttachment(found.hasAttachment)
     setAttachmentName(found.attachmentName)
@@ -126,9 +128,17 @@ function BookingForm() {
 
   const selectedProperty = properties.find(p => String(p.id) === data.propertyId)
 
-  // Solo un admin puede autorizar confirmar sin DNI, y solo en canales Directa/Booking.
-  const canWaiveDni = isAdmin && (data.channel === 'DIRECTA' || data.channel === 'BOOKING')
+  // Canales en los que rigen las excepciones (Airbnb queda fuera).
+  const isDirectOrBooking = data.channel === 'DIRECTA' || data.channel === 'BOOKING'
+
+  // Solo un admin puede autorizar una reserva sin DNI, y solo en canales Directa/Booking.
+  const canWaiveDni = isAdmin && isDirectOrBooking
   const dniWaived = canWaiveDni && data.dniException
+
+  // La seña se pide en Directa/Booking; Airbnb no la pide. Un admin puede eximirla.
+  const senaRequired = isDirectOrBooking
+  const canWaiveSena = isAdmin && senaRequired
+  const senaWaived = canWaiveSena && data.senaException
 
   // Buscador de propiedad (combobox): mientras está abierto se muestra el texto buscado,
   // cerrado muestra el nombre de la propiedad seleccionada.
@@ -224,6 +234,15 @@ function BookingForm() {
     if (!data.firstName.trim()) newErrors.firstName = 'Nombre obligatorio'
     if (!data.lastName.trim()) newErrors.lastName = 'Apellido obligatorio'
     if (!data.phone.trim()) newErrors.phone = 'Teléfono obligatorio'
+    // El DNI es obligatorio salvo que un admin autorice la excepción.
+    if (!data.dni.trim() && !dniWaived) {
+      newErrors.dni = 'DNI obligatorio (requiere autorización de admin para omitirlo)'
+    }
+    // La seña es obligatoria en Directa/Booking salvo autorización de un admin.
+    // En Airbnb no se pide, así que no se valida.
+    if (senaRequired && !senaWaived && calc.senaValue <= 0) {
+      newErrors.senaPct = 'La seña es obligatoria (requiere autorización de admin para omitirla)'
+    }
     // La cantidad de huéspedes no puede superar el máximo configurado en la propiedad.
     if (selectedProperty?.maxGuests && parseInt(data.guests) > parseInt(selectedProperty.maxGuests)) {
       newErrors.guests = `La propiedad admite un máximo de ${selectedProperty.maxGuests} huésped${selectedProperty.maxGuests === '1' ? '' : 'es'}`
@@ -264,6 +283,7 @@ function BookingForm() {
         hasAttachment,
         attachmentName,
         dniException: dniWaived,
+        senaException: senaWaived,
         hasPaymentProof,
         paymentProofName,
         hasVideo,
@@ -469,8 +489,34 @@ function BookingForm() {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="dni" className="block text-sm font-medium text-gray-700">DNI</label>
-                  <input type="text" id="dni" name="dni" value={data.dni} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                  <label htmlFor="dni" className="block text-sm font-medium text-gray-700">
+                    DNI {!dniWaived && '*'}
+                  </label>
+                  <input
+                    type="text"
+                    id="dni"
+                    name="dni"
+                    value={data.dni}
+                    onChange={handleChange}
+                    disabled={dniWaived}
+                    className={`mt-1 ${inputClass('dni')} disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                    placeholder={dniWaived ? 'No requerido (autorizado por admin)' : ''}
+                  />
+                  {errors.dni && <p className="mt-2 text-sm text-red-600">{errors.dni}</p>}
+                  {canWaiveDni && (
+                    <label className="mt-2 flex items-start text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={data.dniException}
+                        onChange={(e) => {
+                          setData(prev => ({ ...prev, dniException: e.target.checked }))
+                          if (e.target.checked) setErrors(prev => ({ ...prev, dni: '' }))
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2 mt-0.5"
+                      />
+                      No pedir DNI (autorización de admin)
+                    </label>
+                  )}
                 </div>
                 <div className="flex items-end">
                   <label className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer w-full justify-center">
@@ -573,10 +619,37 @@ function BookingForm() {
                 <ReadonlyField label="Cargos (limpieza + servicio)" value={`${currencySymbol}${money(calc.cargos)}`} />
                 <ReadonlyField label="Total BRUTO" value={`${currencySymbol}${money(calc.totalBruto)}`} />
                 <div>
-                  <label htmlFor="senaPct" className="block text-sm font-medium text-gray-700">Seña</label>
-                  <select id="senaPct" name="senaPct" value={data.senaPct} onChange={handleChange} className={`mt-1 ${inputClass()}`}>
+                  <label htmlFor="senaPct" className="block text-sm font-medium text-gray-700">
+                    Seña {senaRequired && !senaWaived && '*'}
+                  </label>
+                  <select
+                    id="senaPct"
+                    name="senaPct"
+                    value={data.senaPct}
+                    onChange={handleChange}
+                    disabled={senaWaived}
+                    className={`mt-1 ${inputClass('senaPct')} disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                  >
                     {SENA_OPTIONS.map(s => <option key={s} value={s}>{s}%</option>)}
                   </select>
+                  {!senaRequired && (
+                    <p className="mt-1 text-xs text-gray-500">Airbnb no requiere seña.</p>
+                  )}
+                  {errors.senaPct && <p className="mt-2 text-sm text-red-600">{errors.senaPct}</p>}
+                  {canWaiveSena && (
+                    <label className="mt-2 flex items-start text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={data.senaException}
+                        onChange={(e) => {
+                          setData(prev => ({ ...prev, senaException: e.target.checked }))
+                          if (e.target.checked) setErrors(prev => ({ ...prev, senaPct: '' }))
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2 mt-0.5"
+                      />
+                      Sin seña (autorización de admin)
+                    </label>
+                  )}
                 </div>
                 <ReadonlyField label="Valor de la seña (redondeado)" value={`${currencySymbol}${money(calc.senaValue)}`} />
                 <ReadonlyField label="Restante" value={`${currencySymbol}${money(calc.restante)}`} />
@@ -590,16 +663,10 @@ function BookingForm() {
                     ))}
                   </select>
                   {errors.status && <p className="mt-2 text-sm text-red-600">{errors.status}</p>}
-                  {!hasAttachment && canWaiveDni && (
-                    <label className="mt-2 flex items-start text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={data.dniException}
-                        onChange={(e) => setData(prev => ({ ...prev, dniException: e.target.checked }))}
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2 mt-0.5"
-                      />
-                      Confirmar sin DNI (autorización de admin — solo Directa/Booking)
-                    </label>
+                  {!hasAttachment && canWaiveDni && !dniWaived && (
+                    <p className="mt-2 text-xs text-gray-500">
+                      Para confirmar sin archivo, marcá &quot;No pedir DNI&quot; en Información del Huésped.
+                    </p>
                   )}
                 </div>
               </div>

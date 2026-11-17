@@ -119,135 +119,184 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
 
 exports.Prisma.UserScalarFieldEnum = {
   id: 'id',
-  email: 'email',
+  userType: 'userType',
+  username: 'username',
   name: 'name',
-  password: 'password',
-  role: 'role',
+  lastName: 'lastName',
   phone: 'phone',
-  avatar: 'avatar',
+  email: 'email',
+  passwordHash: 'passwordHash',
+  enabled: 'enabled',
+  extra: 'extra',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
 
-exports.Prisma.AmenityScalarFieldEnum = {
+exports.Prisma.PropertyScalarFieldEnum = {
   id: 'id',
+  category: 'category',
   name: 'name',
-  logo: 'logo'
+  zona: 'zona',
+  address: 'address',
+  number: 'number',
+  floor: 'floor',
+  apartment: 'apartment',
+  description: 'description',
+  bedrooms: 'bedrooms',
+  bathrooms: 'bathrooms',
+  maxGuests: 'maxGuests',
+  propertyType: 'propertyType',
+  ambientes: 'ambientes',
+  checkInFrom: 'checkInFrom',
+  checkInTo: 'checkInTo',
+  checkOutFrom: 'checkOutFrom',
+  checkOutTo: 'checkOutTo',
+  beds: 'beds',
+  amenities: 'amenities',
+  mtsDelMar: 'mtsDelMar',
+  mascotasCantidad: 'mascotasCantidad',
+  chargesCurrency: 'chargesCurrency',
+  charges: 'charges',
+  wifiNetwork: 'wifiNetwork',
+  wifiPassword: 'wifiPassword',
+  keysCount: 'keysCount',
+  electronicKey: 'electronicKey',
+  keyCode: 'keyCode',
+  bookingId: 'bookingId',
+  airbnbId: 'airbnbId',
+  bank: 'bank',
+  photos: 'photos',
+  enabled: 'enabled',
+  eliminado: 'eliminado',
+  createdAt: 'createdAt',
+  deletedAt: 'deletedAt',
+  updatedAt: 'updatedAt',
+  extra: 'extra'
 };
 
-exports.Prisma.UnitScalarFieldEnum = {
+exports.Prisma.ReservationScalarFieldEnum = {
+  id: 'id',
+  status: 'status',
+  propertyId: 'propertyId',
+  propertyName: 'propertyName',
+  checkInDate: 'checkInDate',
+  checkOutDate: 'checkOutDate',
+  checkInTime: 'checkInTime',
+  checkOutTime: 'checkOutTime',
+  guests: 'guests',
+  firstName: 'firstName',
+  lastName: 'lastName',
+  phone: 'phone',
+  docType: 'docType',
+  dni: 'dni',
+  hasAttachment: 'hasAttachment',
+  attachmentName: 'attachmentName',
+  dniException: 'dniException',
+  senaException: 'senaException',
+  hasPaymentProof: 'hasPaymentProof',
+  paymentProofName: 'paymentProofName',
+  hasVideo: 'hasVideo',
+  videoName: 'videoName',
+  observaciones: 'observaciones',
+  currency: 'currency',
+  channel: 'channel',
+  condition: 'condition',
+  nights: 'nights',
+  valorNoches: 'valorNoches',
+  mascotasEnabled: 'mascotasEnabled',
+  mascotasQty: 'mascotasQty',
+  mascotasValue: 'mascotasValue',
+  cocheraEnabled: 'cocheraEnabled',
+  cocheraId: 'cocheraId',
+  cocheraValue: 'cocheraValue',
+  descuento: 'descuento',
+  totalNeto: 'totalNeto',
+  cargos: 'cargos',
+  totalBruto: 'totalBruto',
+  senaPct: 'senaPct',
+  senaValue: 'senaValue',
+  restante: 'restante',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  extra: 'extra'
+};
+
+exports.Prisma.RateEntryScalarFieldEnum = {
+  propertyId: 'propertyId',
+  date: 'date',
+  price: 'price',
+  available: 'available',
+  status: 'status',
+  closedUntil: 'closedUntil',
+  planIds: 'planIds',
+  updatedAt: 'updatedAt',
+  extra: 'extra'
+};
+
+exports.Prisma.RatePlanScalarFieldEnum = {
   id: 'id',
   name: 'name',
   description: 'description',
-  address: 'address',
-  pricePerDay: 'pricePerDay',
-  currency: 'currency',
-  active: 'active',
-  ownerId: 'ownerId'
-};
-
-exports.Prisma.UnitAmenityScalarFieldEnum = {
-  unitId: 'unitId',
-  amenityId: 'amenityId'
-};
-
-exports.Prisma.UnitPhotoScalarFieldEnum = {
-  id: 'id',
-  unitId: 'unitId',
-  url: 'url',
-  caption: 'caption',
-  order: 'order',
-  isPrimary: 'isPrimary'
-};
-
-exports.Prisma.AvailabilityScalarFieldEnum = {
-  id: 'id',
-  unitId: 'unitId',
-  date: 'date',
-  available: 'available',
-  price: 'price',
-  minStay: 'minStay',
-  maxStay: 'maxStay',
-  notes: 'notes'
-};
-
-exports.Prisma.BookingScalarFieldEnum = {
-  id: 'id',
-  unitId: 'unitId',
-  guestId: 'guestId',
-  checkIn: 'checkIn',
-  checkOut: 'checkOut',
-  totalPrice: 'totalPrice',
-  currency: 'currency',
-  status: 'status',
-  source: 'source',
-  externalId: 'externalId',
-  guestName: 'guestName',
-  guestEmail: 'guestEmail',
-  guestPhone: 'guestPhone',
-  numberOfGuests: 'numberOfGuests',
-  specialRequests: 'specialRequests',
-  notes: 'notes',
+  color: 'color',
+  hasMinNights: 'hasMinNights',
+  minNights: 'minNights',
+  hasPerDayNights: 'hasPerDayNights',
+  perDayNights: 'perDayNights',
+  priceVariation: 'priceVariation',
+  priceVariationType: 'priceVariationType',
+  hasStayDiscount: 'hasStayDiscount',
+  stayDiscounts: 'stayDiscounts',
+  proximityDiscounts: 'proximityDiscounts',
+  weekendSurcharge: 'weekendSurcharge',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-};
-
-exports.Prisma.CleaningScalarFieldEnum = {
-  id: 'id',
-  unitId: 'unitId',
-  bookingId: 'bookingId',
-  cleanerId: 'cleanerId',
-  scheduled: 'scheduled',
-  completed: 'completed',
-  notes: 'notes',
-  cost: 'cost',
-  createdAt: 'createdAt'
-};
-
-exports.Prisma.CheckInOutScalarFieldEnum = {
-  id: 'id',
-  bookingId: 'bookingId',
-  unitId: 'unitId',
-  staffId: 'staffId',
-  type: 'type',
-  scheduled: 'scheduled',
-  completed: 'completed',
-  notes: 'notes',
-  createdAt: 'createdAt'
+  updatedAt: 'updatedAt',
+  extra: 'extra'
 };
 
 exports.Prisma.ExpenseScalarFieldEnum = {
   id: 'id',
-  userId: 'userId',
-  unitId: 'unitId',
   description: 'description',
   amount: 'amount',
-  currency: 'currency',
-  category: 'category',
   date: 'date',
+  category: 'category',
+  unit: 'unit',
   receipt: 'receipt',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  extra: 'extra'
 };
 
-exports.Prisma.InventoryScalarFieldEnum = {
+exports.Prisma.InventoryItemScalarFieldEnum = {
   id: 'id',
-  unitId: 'unitId',
   name: 'name',
-  description: 'description',
-  quantity: 'quantity',
-  minQuantity: 'minQuantity',
+  category: 'category',
+  currentStock: 'currentStock',
+  minStock: 'minStock',
+  maxStock: 'maxStock',
+  unit: 'unit',
+  location: 'location',
   cost: 'cost',
   supplier: 'supplier',
-  lastUpdated: 'lastUpdated',
-  createdAt: 'createdAt'
+  lastRestocked: 'lastRestocked',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  extra: 'extra'
 };
 
-exports.Prisma.ConsumptionScalarFieldEnum = {
+exports.Prisma.AppSettingScalarFieldEnum = {
+  key: 'key',
+  value: 'value',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.PhotoScalarFieldEnum = {
   id: 'id',
-  inventoryId: 'inventoryId',
-  quantity: 'quantity',
-  notes: 'notes',
-  consumedAt: 'consumedAt',
+  propertyId: 'propertyId',
+  mimeType: 'mimeType',
+  size: 'size',
+  width: 'width',
+  height: 'height',
+  data: 'data',
   createdAt: 'createdAt'
 };
 
@@ -256,47 +305,42 @@ exports.Prisma.SortOrder = {
   desc: 'desc'
 };
 
+exports.Prisma.NullableJsonNullValueInput = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull
+};
+
+exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
+};
+
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
+};
+
+exports.Prisma.QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+};
+
 exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
 };
-exports.UserRole = exports.$Enums.UserRole = {
-  ADMIN: 'ADMIN',
-  GUEST: 'GUEST',
-  OWNER: 'OWNER',
-  CLEANER: 'CLEANER',
-  CHECKINOUT: 'CHECKINOUT'
-};
 
-exports.BookingStatus = exports.$Enums.BookingStatus = {
-  PENDING: 'PENDING',
-  CONFIRMED: 'CONFIRMED',
-  CANCELLED: 'CANCELLED',
-  COMPLETED: 'COMPLETED',
-  CHECKEDIN: 'CHECKEDIN',
-  CHECKEDOUT: 'CHECKEDOUT'
-};
-
-exports.BookingSource = exports.$Enums.BookingSource = {
-  DIRECT: 'DIRECT',
-  AIRBNB: 'AIRBNB',
-  BOOKING_COM: 'BOOKING_COM',
-  OTHER: 'OTHER'
-};
 
 exports.Prisma.ModelName = {
   User: 'User',
-  Amenity: 'Amenity',
-  Unit: 'Unit',
-  UnitAmenity: 'UnitAmenity',
-  UnitPhoto: 'UnitPhoto',
-  Availability: 'Availability',
-  Booking: 'Booking',
-  Cleaning: 'Cleaning',
-  CheckInOut: 'CheckInOut',
+  Property: 'Property',
+  Reservation: 'Reservation',
+  RateEntry: 'RateEntry',
+  RatePlan: 'RatePlan',
   Expense: 'Expense',
-  Inventory: 'Inventory',
-  Consumption: 'Consumption'
+  InventoryItem: 'InventoryItem',
+  AppSetting: 'AppSetting',
+  Photo: 'Photo'
 };
 
 /**

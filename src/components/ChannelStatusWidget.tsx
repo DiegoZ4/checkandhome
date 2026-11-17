@@ -51,7 +51,7 @@ export default function ChannelStatusWidget() {
         const result = await airbnbService.syncToLocal()
         
         // Mostrar notificación de éxito
-        alert(`Sincronización exitosa:\n- Propiedades: ${result.listings}\n- Reservas: ${result.bookings}`)
+        alert(`Simulación de Airbnb (no se importaron datos, la integración real todavía no está activa):\n- Propiedades encontradas: ${result.listings}\n- Reservas encontradas: ${result.bookings}`)
         
         // Actualizar estado
         setChannels(prev => ({

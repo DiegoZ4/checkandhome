@@ -92,135 +92,184 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
 
 exports.Prisma.UserScalarFieldEnum = {
   id: 'id',
-  email: 'email',
+  userType: 'userType',
+  username: 'username',
   name: 'name',
-  password: 'password',
-  role: 'role',
+  lastName: 'lastName',
   phone: 'phone',
-  avatar: 'avatar',
+  email: 'email',
+  passwordHash: 'passwordHash',
+  enabled: 'enabled',
+  extra: 'extra',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
 
-exports.Prisma.AmenityScalarFieldEnum = {
+exports.Prisma.PropertyScalarFieldEnum = {
   id: 'id',
+  category: 'category',
   name: 'name',
-  logo: 'logo'
+  zona: 'zona',
+  address: 'address',
+  number: 'number',
+  floor: 'floor',
+  apartment: 'apartment',
+  description: 'description',
+  bedrooms: 'bedrooms',
+  bathrooms: 'bathrooms',
+  maxGuests: 'maxGuests',
+  propertyType: 'propertyType',
+  ambientes: 'ambientes',
+  checkInFrom: 'checkInFrom',
+  checkInTo: 'checkInTo',
+  checkOutFrom: 'checkOutFrom',
+  checkOutTo: 'checkOutTo',
+  beds: 'beds',
+  amenities: 'amenities',
+  mtsDelMar: 'mtsDelMar',
+  mascotasCantidad: 'mascotasCantidad',
+  chargesCurrency: 'chargesCurrency',
+  charges: 'charges',
+  wifiNetwork: 'wifiNetwork',
+  wifiPassword: 'wifiPassword',
+  keysCount: 'keysCount',
+  electronicKey: 'electronicKey',
+  keyCode: 'keyCode',
+  bookingId: 'bookingId',
+  airbnbId: 'airbnbId',
+  bank: 'bank',
+  photos: 'photos',
+  enabled: 'enabled',
+  eliminado: 'eliminado',
+  createdAt: 'createdAt',
+  deletedAt: 'deletedAt',
+  updatedAt: 'updatedAt',
+  extra: 'extra'
 };
 
-exports.Prisma.UnitScalarFieldEnum = {
+exports.Prisma.ReservationScalarFieldEnum = {
+  id: 'id',
+  status: 'status',
+  propertyId: 'propertyId',
+  propertyName: 'propertyName',
+  checkInDate: 'checkInDate',
+  checkOutDate: 'checkOutDate',
+  checkInTime: 'checkInTime',
+  checkOutTime: 'checkOutTime',
+  guests: 'guests',
+  firstName: 'firstName',
+  lastName: 'lastName',
+  phone: 'phone',
+  docType: 'docType',
+  dni: 'dni',
+  hasAttachment: 'hasAttachment',
+  attachmentName: 'attachmentName',
+  dniException: 'dniException',
+  senaException: 'senaException',
+  hasPaymentProof: 'hasPaymentProof',
+  paymentProofName: 'paymentProofName',
+  hasVideo: 'hasVideo',
+  videoName: 'videoName',
+  observaciones: 'observaciones',
+  currency: 'currency',
+  channel: 'channel',
+  condition: 'condition',
+  nights: 'nights',
+  valorNoches: 'valorNoches',
+  mascotasEnabled: 'mascotasEnabled',
+  mascotasQty: 'mascotasQty',
+  mascotasValue: 'mascotasValue',
+  cocheraEnabled: 'cocheraEnabled',
+  cocheraId: 'cocheraId',
+  cocheraValue: 'cocheraValue',
+  descuento: 'descuento',
+  totalNeto: 'totalNeto',
+  cargos: 'cargos',
+  totalBruto: 'totalBruto',
+  senaPct: 'senaPct',
+  senaValue: 'senaValue',
+  restante: 'restante',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  extra: 'extra'
+};
+
+exports.Prisma.RateEntryScalarFieldEnum = {
+  propertyId: 'propertyId',
+  date: 'date',
+  price: 'price',
+  available: 'available',
+  status: 'status',
+  closedUntil: 'closedUntil',
+  planIds: 'planIds',
+  updatedAt: 'updatedAt',
+  extra: 'extra'
+};
+
+exports.Prisma.RatePlanScalarFieldEnum = {
   id: 'id',
   name: 'name',
   description: 'description',
-  address: 'address',
-  pricePerDay: 'pricePerDay',
-  currency: 'currency',
-  active: 'active',
-  ownerId: 'ownerId'
-};
-
-exports.Prisma.UnitAmenityScalarFieldEnum = {
-  unitId: 'unitId',
-  amenityId: 'amenityId'
-};
-
-exports.Prisma.UnitPhotoScalarFieldEnum = {
-  id: 'id',
-  unitId: 'unitId',
-  url: 'url',
-  caption: 'caption',
-  order: 'order',
-  isPrimary: 'isPrimary'
-};
-
-exports.Prisma.AvailabilityScalarFieldEnum = {
-  id: 'id',
-  unitId: 'unitId',
-  date: 'date',
-  available: 'available',
-  price: 'price',
-  minStay: 'minStay',
-  maxStay: 'maxStay',
-  notes: 'notes'
-};
-
-exports.Prisma.BookingScalarFieldEnum = {
-  id: 'id',
-  unitId: 'unitId',
-  guestId: 'guestId',
-  checkIn: 'checkIn',
-  checkOut: 'checkOut',
-  totalPrice: 'totalPrice',
-  currency: 'currency',
-  status: 'status',
-  source: 'source',
-  externalId: 'externalId',
-  guestName: 'guestName',
-  guestEmail: 'guestEmail',
-  guestPhone: 'guestPhone',
-  numberOfGuests: 'numberOfGuests',
-  specialRequests: 'specialRequests',
-  notes: 'notes',
+  color: 'color',
+  hasMinNights: 'hasMinNights',
+  minNights: 'minNights',
+  hasPerDayNights: 'hasPerDayNights',
+  perDayNights: 'perDayNights',
+  priceVariation: 'priceVariation',
+  priceVariationType: 'priceVariationType',
+  hasStayDiscount: 'hasStayDiscount',
+  stayDiscounts: 'stayDiscounts',
+  proximityDiscounts: 'proximityDiscounts',
+  weekendSurcharge: 'weekendSurcharge',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-};
-
-exports.Prisma.CleaningScalarFieldEnum = {
-  id: 'id',
-  unitId: 'unitId',
-  bookingId: 'bookingId',
-  cleanerId: 'cleanerId',
-  scheduled: 'scheduled',
-  completed: 'completed',
-  notes: 'notes',
-  cost: 'cost',
-  createdAt: 'createdAt'
-};
-
-exports.Prisma.CheckInOutScalarFieldEnum = {
-  id: 'id',
-  bookingId: 'bookingId',
-  unitId: 'unitId',
-  staffId: 'staffId',
-  type: 'type',
-  scheduled: 'scheduled',
-  completed: 'completed',
-  notes: 'notes',
-  createdAt: 'createdAt'
+  updatedAt: 'updatedAt',
+  extra: 'extra'
 };
 
 exports.Prisma.ExpenseScalarFieldEnum = {
   id: 'id',
-  userId: 'userId',
-  unitId: 'unitId',
   description: 'description',
   amount: 'amount',
-  currency: 'currency',
-  category: 'category',
   date: 'date',
+  category: 'category',
+  unit: 'unit',
   receipt: 'receipt',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  extra: 'extra'
 };
 
-exports.Prisma.InventoryScalarFieldEnum = {
+exports.Prisma.InventoryItemScalarFieldEnum = {
   id: 'id',
-  unitId: 'unitId',
   name: 'name',
-  description: 'description',
-  quantity: 'quantity',
-  minQuantity: 'minQuantity',
+  category: 'category',
+  currentStock: 'currentStock',
+  minStock: 'minStock',
+  maxStock: 'maxStock',
+  unit: 'unit',
+  location: 'location',
   cost: 'cost',
   supplier: 'supplier',
-  lastUpdated: 'lastUpdated',
-  createdAt: 'createdAt'
+  lastRestocked: 'lastRestocked',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  extra: 'extra'
 };
 
-exports.Prisma.ConsumptionScalarFieldEnum = {
+exports.Prisma.AppSettingScalarFieldEnum = {
+  key: 'key',
+  value: 'value',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.PhotoScalarFieldEnum = {
   id: 'id',
-  inventoryId: 'inventoryId',
-  quantity: 'quantity',
-  notes: 'notes',
-  consumedAt: 'consumedAt',
+  propertyId: 'propertyId',
+  mimeType: 'mimeType',
+  size: 'size',
+  width: 'width',
+  height: 'height',
+  data: 'data',
   createdAt: 'createdAt'
 };
 
@@ -229,47 +278,42 @@ exports.Prisma.SortOrder = {
   desc: 'desc'
 };
 
+exports.Prisma.NullableJsonNullValueInput = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull
+};
+
+exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
+};
+
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
+};
+
+exports.Prisma.QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+};
+
 exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
 };
-exports.UserRole = exports.$Enums.UserRole = {
-  ADMIN: 'ADMIN',
-  GUEST: 'GUEST',
-  OWNER: 'OWNER',
-  CLEANER: 'CLEANER',
-  CHECKINOUT: 'CHECKINOUT'
-};
 
-exports.BookingStatus = exports.$Enums.BookingStatus = {
-  PENDING: 'PENDING',
-  CONFIRMED: 'CONFIRMED',
-  CANCELLED: 'CANCELLED',
-  COMPLETED: 'COMPLETED',
-  CHECKEDIN: 'CHECKEDIN',
-  CHECKEDOUT: 'CHECKEDOUT'
-};
-
-exports.BookingSource = exports.$Enums.BookingSource = {
-  DIRECT: 'DIRECT',
-  AIRBNB: 'AIRBNB',
-  BOOKING_COM: 'BOOKING_COM',
-  OTHER: 'OTHER'
-};
 
 exports.Prisma.ModelName = {
   User: 'User',
-  Amenity: 'Amenity',
-  Unit: 'Unit',
-  UnitAmenity: 'UnitAmenity',
-  UnitPhoto: 'UnitPhoto',
-  Availability: 'Availability',
-  Booking: 'Booking',
-  Cleaning: 'Cleaning',
-  CheckInOut: 'CheckInOut',
+  Property: 'Property',
+  Reservation: 'Reservation',
+  RateEntry: 'RateEntry',
+  RatePlan: 'RatePlan',
   Expense: 'Expense',
-  Inventory: 'Inventory',
-  Consumption: 'Consumption'
+  InventoryItem: 'InventoryItem',
+  AppSetting: 'AppSetting',
+  Photo: 'Photo'
 };
 /**
  * Create the Client
@@ -279,10 +323,10 @@ const config = {
   "clientVersion": "7.2.0",
   "engineVersion": "0c8ef2ce45c83248ab3df073180d5eda9e8be7a3",
   "activeProvider": "sqlite",
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"sqlite\"\n}\n\nenum UserRole {\n  ADMIN\n  GUEST\n  OWNER\n  CLEANER\n  CHECKINOUT\n}\n\nmodel User {\n  id        String   @id @default(cuid())\n  email     String   @unique\n  name      String?\n  password  String\n  role      UserRole @default(GUEST)\n  phone     String?\n  avatar    String?\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  // Relations\n  ownedUnits      Unit[]       @relation(\"OwnerUnits\")\n  bookings        Booking[]\n  cleaningTasks   Cleaning[]\n  checkInOutTasks CheckInOut[]\n  expenses        Expense[]\n\n  @@map(\"users\")\n}\n\nmodel Amenity {\n  id   String  @id @default(cuid())\n  name String  @unique\n  logo String?\n\n  // Relations\n  units UnitAmenity[]\n\n  @@map(\"amenities\")\n}\n\nmodel Unit {\n  id          String  @id @default(cuid())\n  name        String\n  description String?\n  address     String\n  pricePerDay Float // Price in USD\n  currency    String  @default(\"USD\")\n  active      Boolean @default(true)\n  ownerId     String\n\n  // Relations\n  owner        User           @relation(\"OwnerUnits\", fields: [ownerId], references: [id])\n  amenities    UnitAmenity[]\n  photos       UnitPhoto[]\n  bookings     Booking[]\n  availability Availability[]\n  inventory    Inventory[]\n  cleanings    Cleaning[]\n  checkInOuts  CheckInOut[]\n  expenses     Expense[]\n\n  @@map(\"units\")\n}\n\nmodel UnitAmenity {\n  unitId    String\n  amenityId String\n\n  unit    Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)\n  amenity Amenity @relation(fields: [amenityId], references: [id], onDelete: Cascade)\n\n  @@id([unitId, amenityId])\n  @@map(\"unit_amenities\")\n}\n\nmodel UnitPhoto {\n  id        String  @id @default(cuid())\n  unitId    String\n  url       String\n  caption   String?\n  order     Int     @default(0)\n  isPrimary Boolean @default(false)\n\n  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)\n\n  @@map(\"unit_photos\")\n}\n\nmodel Availability {\n  id        String   @id @default(cuid())\n  unitId    String\n  date      DateTime\n  available Boolean  @default(true)\n  price     Float? // Override daily price for specific dates\n  minStay   Int? // Minimum stay for this date\n  maxStay   Int? // Maximum stay for this date\n  notes     String?\n\n  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)\n\n  @@unique([unitId, date])\n  @@map(\"availability\")\n}\n\nenum BookingStatus {\n  PENDING\n  CONFIRMED\n  CANCELLED\n  COMPLETED\n  CHECKEDIN\n  CHECKEDOUT\n}\n\nenum BookingSource {\n  DIRECT\n  AIRBNB\n  BOOKING_COM\n  OTHER\n}\n\nmodel Booking {\n  id              String        @id @default(cuid())\n  unitId          String\n  guestId         String\n  checkIn         DateTime\n  checkOut        DateTime\n  totalPrice      Float\n  currency        String        @default(\"USD\")\n  status          BookingStatus @default(PENDING)\n  source          BookingSource @default(DIRECT)\n  externalId      String? // ID from channel manager (Airbnb, Booking.com)\n  guestName       String\n  guestEmail      String\n  guestPhone      String?\n  numberOfGuests  Int           @default(1)\n  specialRequests String?\n  notes           String?\n  createdAt       DateTime      @default(now())\n  updatedAt       DateTime      @updatedAt\n\n  // Relations\n  unit        Unit         @relation(fields: [unitId], references: [id])\n  guest       User         @relation(fields: [guestId], references: [id])\n  cleanings   Cleaning[]\n  checkInOuts CheckInOut[]\n\n  @@map(\"bookings\")\n}\n\nmodel Cleaning {\n  id        String    @id @default(cuid())\n  unitId    String\n  bookingId String?\n  cleanerId String\n  scheduled DateTime\n  completed DateTime?\n  notes     String?\n  cost      Float?\n  createdAt DateTime  @default(now())\n\n  // Relations\n  unit    Unit     @relation(fields: [unitId], references: [id])\n  booking Booking? @relation(fields: [bookingId], references: [id])\n  cleaner User     @relation(fields: [cleanerId], references: [id])\n\n  @@map(\"cleanings\")\n}\n\nmodel CheckInOut {\n  id        String    @id @default(cuid())\n  bookingId String\n  unitId    String\n  staffId   String\n  type      String // \"CHECK_IN\" or \"CHECK_OUT\"\n  scheduled DateTime\n  completed DateTime?\n  notes     String?\n  createdAt DateTime  @default(now())\n\n  // Relations\n  booking Booking @relation(fields: [bookingId], references: [id])\n  unit    Unit    @relation(fields: [unitId], references: [id])\n  staff   User    @relation(fields: [staffId], references: [id])\n\n  @@map(\"check_in_outs\")\n}\n\nmodel Expense {\n  id          String   @id @default(cuid())\n  userId      String\n  unitId      String?\n  description String\n  amount      Float\n  currency    String   @default(\"USD\")\n  category    String? // \"MAINTENANCE\", \"SUPPLIES\", \"UTILITIES\", etc.\n  date        DateTime @default(now())\n  receipt     String? // URL to receipt image\n  createdAt   DateTime @default(now())\n\n  // Relations\n  user User  @relation(fields: [userId], references: [id])\n  unit Unit? @relation(fields: [unitId], references: [id])\n\n  @@map(\"expenses\")\n}\n\nmodel Inventory {\n  id          String   @id @default(cuid())\n  unitId      String\n  name        String\n  description String?\n  quantity    Int      @default(0)\n  minQuantity Int      @default(0)\n  cost        Float?\n  supplier    String?\n  lastUpdated DateTime @updatedAt\n  createdAt   DateTime @default(now())\n\n  // Relations\n  unit         Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)\n  consumptions Consumption[]\n\n  @@map(\"inventory\")\n}\n\nmodel Consumption {\n  id          String   @id @default(cuid())\n  inventoryId String\n  quantity    Int\n  notes       String?\n  consumedAt  DateTime @default(now())\n  createdAt   DateTime @default(now())\n\n  // Relations\n  inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)\n\n  @@map(\"consumptions\")\n}\n"
+  "inlineSchema": "// Base de datos de Check and Point.\n//\n// Las tablas reflejan los datos que realmente usa la UI (src/lib/properties.ts,\n// rates.ts, reservations.ts, y las páginas de gastos/inventario/usuarios).\n// Los IDs numéricos (Date.now()) se guardan como BigInt.\n// Campos anidados (camas, comodidades, cargos, banco, fotos, descuentos) van en\n// columnas Json. `extra` guarda cualquier campo que la UI agregue y que todavía\n// no tenga columna propia, para no perder datos.\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"sqlite\"\n}\n\nmodel User {\n  id           BigInt   @id\n  userType     String // admin | reservas | propietarios | checkin | huesped | limpieza | mantenimiento\n  username     String\n  name         String\n  lastName     String\n  phone        String\n  email        String   @unique\n  passwordHash String\n  enabled      Boolean  @default(true)\n  extra        Json?\n  createdAt    DateTime @default(now())\n  updatedAt    DateTime @updatedAt\n\n  @@index([username])\n  @@map(\"users\")\n}\n\nmodel Property {\n  id          BigInt @id\n  category    String\n  name        String\n  zona        String\n  address     String\n  number      String\n  floor       String\n  apartment   String\n  description String\n\n  // Detalles\n  bedrooms     String\n  bathrooms    String\n  maxGuests    String\n  propertyType String\n  ambientes    String\n\n  // Horarios\n  checkInFrom  String\n  checkInTo    String\n  checkOutFrom String\n  checkOutTo   String\n\n  beds             Json // Record<bedType, BedConfig>\n  amenities        Json // Record<amenityId, boolean>\n  mtsDelMar        String\n  mascotasCantidad String\n\n  // Cargos\n  chargesCurrency String\n  charges         Json // { limpieza, servicio, mascotas, cochera, deposito, depositoJoven }\n\n  // WIFI\n  wifiNetwork  String\n  wifiPassword String\n\n  // Llaves\n  keysCount     String\n  electronicKey Boolean\n  keyCode       String\n\n  // IDs externos (channel manager)\n  bookingId String\n  airbnbId  String\n\n  bank   Json // cuenta bancaria del propietario\n  photos Json // string[]\n\n  enabled   Boolean   @default(true)\n  eliminado Boolean   @default(false)\n  createdAt DateTime  @default(now())\n  deletedAt DateTime?\n  updatedAt DateTime  @updatedAt\n  extra     Json?\n\n  @@index([eliminado])\n  @@map(\"properties\")\n}\n\nmodel Reservation {\n  id           BigInt @id\n  status       String // CONFIRMADA | PENDIENTE | CANCELADA\n  propertyId   String\n  propertyName String\n\n  checkInDate  String // YYYY-MM-DD\n  checkOutDate String // YYYY-MM-DD\n  checkInTime  String\n  checkOutTime String\n  guests       Int\n\n  // Huésped\n  firstName      String\n  lastName       String\n  phone          String\n  docType        String\n  dni            String\n  hasAttachment  Boolean\n  attachmentName String\n  dniException   Boolean\n  senaException  Boolean\n\n  hasPaymentProof  Boolean\n  paymentProofName String\n  hasVideo         Boolean\n  videoName        String\n  observaciones    String\n\n  // Valor\n  currency    String\n  channel     String // DIRECTA | BOOKING | AIRBNB\n  condition   String\n  nights      Int\n  valorNoches Float\n\n  mascotasEnabled Boolean\n  mascotasQty     Int\n  mascotasValue   Float\n\n  cocheraEnabled Boolean\n  cocheraId      String\n  cocheraValue   Float\n\n  descuento  Float\n  totalNeto  Float\n  cargos     Float\n  totalBruto Float\n  senaPct    Float\n  senaValue  Float\n  restante   Float\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n  extra     Json?\n\n  @@index([propertyId])\n  @@index([checkInDate])\n  @@map(\"reservations\")\n}\n\n// Calendario de tarifas/disponibilidad: una fila por propiedad y día.\nmodel RateEntry {\n  propertyId  String\n  date        String // YYYY-MM-DD (hora local)\n  price       Float\n  available   Boolean\n  status      String? // abierto | cerrado | cerrado24\n  closedUntil String?\n  planIds     Json // string[]\n  updatedAt   DateTime @updatedAt\n  extra       Json?\n\n  @@id([propertyId, date])\n  @@map(\"rate_entries\")\n}\n\nmodel RatePlan {\n  id                 String   @id\n  name               String\n  description        String\n  color              String?\n  hasMinNights       Boolean\n  minNights          Int\n  hasPerDayNights    Boolean\n  perDayNights       Json // Record<weekday, string>\n  priceVariation     String\n  priceVariationType String // aumento | reduccion\n  hasStayDiscount    Boolean\n  stayDiscounts      Json // { duration, percent }[]\n  proximityDiscounts Json // { days, percent }[]\n  weekendSurcharge   String\n  createdAt          DateTime @default(now())\n  updatedAt          DateTime @updatedAt\n  extra              Json?\n\n  @@map(\"rate_plans\")\n}\n\nmodel Expense {\n  id          BigInt   @id\n  description String\n  amount      Float\n  date        String // YYYY-MM-DD\n  category    String\n  unit        String // nombre de la propiedad o \"General\"\n  receipt     String?\n  createdAt   DateTime @default(now())\n  updatedAt   DateTime @updatedAt\n  extra       Json?\n\n  @@index([date])\n  @@map(\"expenses\")\n}\n\nmodel InventoryItem {\n  id            BigInt   @id\n  name          String\n  category      String\n  currentStock  Float\n  minStock      Float\n  maxStock      Float\n  unit          String\n  location      String\n  cost          Float\n  supplier      String?\n  lastRestocked String?\n  createdAt     DateTime @default(now())\n  updatedAt     DateTime @updatedAt\n  extra         Json?\n\n  @@map(\"inventory_items\")\n}\n\n// Configuración (settings de usuario, canales, secreto de auth, etc.)\nmodel AppSetting {\n  key       String   @id\n  value     Json\n  updatedAt DateTime @updatedAt\n\n  @@map(\"app_settings\")\n}\n\n// Fotos (de propiedades y cocheras). Se guardan los bytes en la base, ya comprimidos;\n// la propiedad guarda sólo la URL /api/photos/<id>.\nmodel Photo {\n  id         String   @id // aleatorio, no adivinable\n  propertyId String? // null mientras no se guardó la propiedad (se limpia a las 24h)\n  mimeType   String\n  size       Int\n  width      Int?\n  height     Int?\n  data       Bytes\n  createdAt  DateTime @default(now())\n\n  @@index([propertyId])\n  @@map(\"photos\")\n}\n"
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"UserRole\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"avatar\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"ownedUnits\",\"kind\":\"object\",\"type\":\"Unit\",\"relationName\":\"OwnerUnits\"},{\"name\":\"bookings\",\"kind\":\"object\",\"type\":\"Booking\",\"relationName\":\"BookingToUser\"},{\"name\":\"cleaningTasks\",\"kind\":\"object\",\"type\":\"Cleaning\",\"relationName\":\"CleaningToUser\"},{\"name\":\"checkInOutTasks\",\"kind\":\"object\",\"type\":\"CheckInOut\",\"relationName\":\"CheckInOutToUser\"},{\"name\":\"expenses\",\"kind\":\"object\",\"type\":\"Expense\",\"relationName\":\"ExpenseToUser\"}],\"dbName\":\"users\"},\"Amenity\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"logo\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"units\",\"kind\":\"object\",\"type\":\"UnitAmenity\",\"relationName\":\"AmenityToUnitAmenity\"}],\"dbName\":\"amenities\"},\"Unit\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"address\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"pricePerDay\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"active\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"ownerId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"owner\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"OwnerUnits\"},{\"name\":\"amenities\",\"kind\":\"object\",\"type\":\"UnitAmenity\",\"relationName\":\"UnitToUnitAmenity\"},{\"name\":\"photos\",\"kind\":\"object\",\"type\":\"UnitPhoto\",\"relationName\":\"UnitToUnitPhoto\"},{\"name\":\"bookings\",\"kind\":\"object\",\"type\":\"Booking\",\"relationName\":\"BookingToUnit\"},{\"name\":\"availability\",\"kind\":\"object\",\"type\":\"Availability\",\"relationName\":\"AvailabilityToUnit\"},{\"name\":\"inventory\",\"kind\":\"object\",\"type\":\"Inventory\",\"relationName\":\"InventoryToUnit\"},{\"name\":\"cleanings\",\"kind\":\"object\",\"type\":\"Cleaning\",\"relationName\":\"CleaningToUnit\"},{\"name\":\"checkInOuts\",\"kind\":\"object\",\"type\":\"CheckInOut\",\"relationName\":\"CheckInOutToUnit\"},{\"name\":\"expenses\",\"kind\":\"object\",\"type\":\"Expense\",\"relationName\":\"ExpenseToUnit\"}],\"dbName\":\"units\"},\"UnitAmenity\":{\"fields\":[{\"name\":\"unitId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amenityId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"unit\",\"kind\":\"object\",\"type\":\"Unit\",\"relationName\":\"UnitToUnitAmenity\"},{\"name\":\"amenity\",\"kind\":\"object\",\"type\":\"Amenity\",\"relationName\":\"AmenityToUnitAmenity\"}],\"dbName\":\"unit_amenities\"},\"UnitPhoto\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"unitId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"caption\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"order\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"isPrimary\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"unit\",\"kind\":\"object\",\"type\":\"Unit\",\"relationName\":\"UnitToUnitPhoto\"}],\"dbName\":\"unit_photos\"},\"Availability\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"unitId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"available\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"price\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"minStay\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"maxStay\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"unit\",\"kind\":\"object\",\"type\":\"Unit\",\"relationName\":\"AvailabilityToUnit\"}],\"dbName\":\"availability\"},\"Booking\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"unitId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"guestId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"checkIn\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"checkOut\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"totalPrice\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"BookingStatus\"},{\"name\":\"source\",\"kind\":\"enum\",\"type\":\"BookingSource\"},{\"name\":\"externalId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"guestName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"guestEmail\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"guestPhone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"numberOfGuests\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"specialRequests\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"unit\",\"kind\":\"object\",\"type\":\"Unit\",\"relationName\":\"BookingToUnit\"},{\"name\":\"guest\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"BookingToUser\"},{\"name\":\"cleanings\",\"kind\":\"object\",\"type\":\"Cleaning\",\"relationName\":\"BookingToCleaning\"},{\"name\":\"checkInOuts\",\"kind\":\"object\",\"type\":\"CheckInOut\",\"relationName\":\"BookingToCheckInOut\"}],\"dbName\":\"bookings\"},\"Cleaning\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"unitId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bookingId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cleanerId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"scheduled\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"completed\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cost\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"unit\",\"kind\":\"object\",\"type\":\"Unit\",\"relationName\":\"CleaningToUnit\"},{\"name\":\"booking\",\"kind\":\"object\",\"type\":\"Booking\",\"relationName\":\"BookingToCleaning\"},{\"name\":\"cleaner\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"CleaningToUser\"}],\"dbName\":\"cleanings\"},\"CheckInOut\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bookingId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"unitId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"staffId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"scheduled\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"completed\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"booking\",\"kind\":\"object\",\"type\":\"Booking\",\"relationName\":\"BookingToCheckInOut\"},{\"name\":\"unit\",\"kind\":\"object\",\"type\":\"Unit\",\"relationName\":\"CheckInOutToUnit\"},{\"name\":\"staff\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"CheckInOutToUser\"}],\"dbName\":\"check_in_outs\"},\"Expense\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"unitId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"category\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"receipt\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ExpenseToUser\"},{\"name\":\"unit\",\"kind\":\"object\",\"type\":\"Unit\",\"relationName\":\"ExpenseToUnit\"}],\"dbName\":\"expenses\"},\"Inventory\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"unitId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"minQuantity\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"cost\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"supplier\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"lastUpdated\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"unit\",\"kind\":\"object\",\"type\":\"Unit\",\"relationName\":\"InventoryToUnit\"},{\"name\":\"consumptions\",\"kind\":\"object\",\"type\":\"Consumption\",\"relationName\":\"ConsumptionToInventory\"}],\"dbName\":\"inventory\"},\"Consumption\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"inventoryId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"consumedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"inventory\",\"kind\":\"object\",\"type\":\"Inventory\",\"relationName\":\"ConsumptionToInventory\"}],\"dbName\":\"consumptions\"}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"BigInt\"},{\"name\":\"userType\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"username\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"lastName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"passwordHash\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"enabled\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"extra\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"users\"},\"Property\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"BigInt\"},{\"name\":\"category\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"zona\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"address\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"floor\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"apartment\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bedrooms\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bathrooms\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"maxGuests\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"propertyType\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"ambientes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"checkInFrom\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"checkInTo\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"checkOutFrom\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"checkOutTo\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"beds\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"amenities\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"mtsDelMar\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"mascotasCantidad\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"chargesCurrency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"charges\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"wifiNetwork\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"wifiPassword\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"keysCount\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"electronicKey\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"keyCode\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bookingId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"airbnbId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bank\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"photos\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"enabled\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"eliminado\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"deletedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"extra\",\"kind\":\"scalar\",\"type\":\"Json\"}],\"dbName\":\"properties\"},\"Reservation\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"BigInt\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"propertyId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"propertyName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"checkInDate\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"checkOutDate\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"checkInTime\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"checkOutTime\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"guests\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"firstName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"lastName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"docType\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"dni\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"hasAttachment\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"attachmentName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"dniException\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"senaException\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"hasPaymentProof\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"paymentProofName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"hasVideo\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"videoName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"observaciones\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"channel\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"condition\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"nights\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"valorNoches\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"mascotasEnabled\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"mascotasQty\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"mascotasValue\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"cocheraEnabled\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"cocheraId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cocheraValue\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"descuento\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"totalNeto\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"cargos\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"totalBruto\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"senaPct\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"senaValue\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"restante\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"extra\",\"kind\":\"scalar\",\"type\":\"Json\"}],\"dbName\":\"reservations\"},\"RateEntry\":{\"fields\":[{\"name\":\"propertyId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"price\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"available\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"closedUntil\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"planIds\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"extra\",\"kind\":\"scalar\",\"type\":\"Json\"}],\"dbName\":\"rate_entries\"},\"RatePlan\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"color\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"hasMinNights\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"minNights\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"hasPerDayNights\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"perDayNights\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"priceVariation\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"priceVariationType\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"hasStayDiscount\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"stayDiscounts\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"proximityDiscounts\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"weekendSurcharge\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"extra\",\"kind\":\"scalar\",\"type\":\"Json\"}],\"dbName\":\"rate_plans\"},\"Expense\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"BigInt\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"category\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"unit\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"receipt\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"extra\",\"kind\":\"scalar\",\"type\":\"Json\"}],\"dbName\":\"expenses\"},\"InventoryItem\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"BigInt\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"category\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"currentStock\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"minStock\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"maxStock\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"unit\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"location\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cost\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"supplier\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"lastRestocked\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"extra\",\"kind\":\"scalar\",\"type\":\"Json\"}],\"dbName\":\"inventory_items\"},\"AppSetting\":{\"fields\":[{\"name\":\"key\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"value\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"app_settings\"},\"Photo\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"propertyId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"mimeType\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"size\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"width\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"height\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"data\",\"kind\":\"scalar\",\"type\":\"Bytes\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"photos\"}},\"enums\":{},\"types\":{}}")
 defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
 config.compilerWasm = {
       getRuntime: async () => require('./query_compiler_bg.js'),

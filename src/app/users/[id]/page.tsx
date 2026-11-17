@@ -5,7 +5,7 @@ import { Users, ArrowLeft, Edit } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import { getUserTypeName } from '../page'
+import { getUserTypeName } from '@/lib/userTypes'
 
 interface AppUser {
   id: number

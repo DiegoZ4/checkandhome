@@ -5,7 +5,7 @@ import { Building2, Users, Calendar, DollarSign, Package, TrendingUp, Eye, EyeOf
 import Link from 'next/link'
 import ChannelStatusWidget from '@/components/ChannelStatusWidget'
 import Navbar from '@/components/Navbar'
-import { getUserTypeName } from '@/app/users/page'
+import { decodeTokenPayload, pullFromServer } from '@/lib/cloudSync'
 
 interface User {
   email: string;
@@ -79,8 +79,8 @@ export default function DashboardPage() {
       if (storedToken && storedUser) {
         try {
           const userData = JSON.parse(storedUser)
-          // Verificar si el token es válido (simulado)
-          const tokenData = JSON.parse(atob(storedToken.split('.')[1] || ''))
+          const tokenData = decodeTokenPayload(storedToken)
+          if (!tokenData) throw new Error('token inválido')
           const currentTime = Date.now() / 1000
           
           if (tokenData.exp && tokenData.exp > currentTime) {
@@ -103,79 +103,33 @@ export default function DashboardPage() {
     checkAuthToken()
   }, [])
 
-  const generateToken = (userData: Omit<User, 'token'>) => {
-    // Simular JWT token (en producción usar JWT real)
-    const header = { alg: 'HS256', typ: 'JWT' }
-    const payload = { 
-      email: userData.email, 
-      role: userData.role,
-      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 horas
-    }
-    
-    const encodedHeader = btoa(JSON.stringify(header))
-    const encodedPayload = btoa(JSON.stringify(payload))
-    const signature = 'mock-signature' // En producción usar firma real
-    
-    return `${encodedHeader}.${encodedPayload}.${signature}`
-  }
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
 
     try {
-      let userData: Omit<User, 'token'> | null = null
-      const loginId = email.trim().toLowerCase()
-
-      // 1) Usuarios creados en la sección Usuarios (por email o username)
-      try {
-        type StoredUser = { email?: string; username?: string; name?: string; lastName?: string; password?: string; enabled?: boolean; userType: string }
-        const createdUsers: StoredUser[] = JSON.parse(localStorage.getItem('checkAndPointUsers') || '[]')
-        const match = createdUsers.find((u) =>
-          (u.email?.toLowerCase() === loginId || u.username?.toLowerCase() === loginId) &&
-          u.password === password
-        )
-        if (match) {
-          if (!match.enabled) {
-            setError('El usuario está deshabilitado. Contacta al administrador.')
-            return
-          }
-          const fullName = `${match.name || ''} ${match.lastName || ''}`.trim()
-          userData = {
-            email: match.email || email.trim(),
-            role: getUserTypeName(match.userType),
-            name: fullName || match.username || match.email,
-          }
-        }
-      } catch {
-        // Si falla la lectura, continúa con las cuentas demo
-      }
-
-      // 2) Cuentas demo (fallback)
-      if (!userData) {
-        if (email === 'admin@demo.com' && password === 'password123') {
-          userData = { email, role: 'Administrador' }
-        } else if (email === 'owner@demo.com' && password === 'password123') {
-          userData = { email, role: 'Propietario' }
-        } else if (email === 'guest@demo.com' && password === 'password123') {
-          userData = { email, role: 'Huésped' }
-        }
-      }
-
-      if (!userData) {
-        setError('Email o contraseña incorrectos')
+      // El servidor valida las credenciales (usuarios creados + cuentas demo)
+      // y devuelve un token firmado.
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(body.error || 'Email o contraseña incorrectos')
         return
       }
 
-      // Generar token y guardarlo
-      const token = generateToken(userData)
-      const userWithToken = { ...userData, token }
-      
+      const { token, user: userData } = body as { token: string; user: Omit<User, 'token'> }
       localStorage.setItem('checkAndPointToken', token)
       localStorage.setItem('checkAndPointUser', JSON.stringify(userData))
-      
-      setUser(userWithToken)
+
+      // Traer los datos guardados en el servidor antes de mostrar el panel.
+      await pullFromServer(token)
+
+      setUser({ ...userData, token })
       setIsLoggedIn(true)
       
     } catch (error) {

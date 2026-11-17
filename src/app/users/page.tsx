@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Users, Plus, Search, Edit, Trash2, Eye } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import { getUserTypeName } from '@/lib/userTypes'
 
 interface AppUser {
   id: number
@@ -15,22 +16,6 @@ interface AppUser {
   email: string
   enabled: boolean
   createdAt: string
-}
-
-// Tipos de usuario disponibles (según especificación)
-export const USER_TYPES = [
-  { id: 'admin', name: 'Admin', description: 'Tiene acceso a todas las funciones' },
-  { id: 'reservas', name: 'Reservas', description: 'Tiene acceso solo a reservas' },
-  { id: 'propietarios', name: 'Propietarios', description: 'Tiene acceso solo al calendario de su propiedad' },
-  { id: 'checkin', name: 'Check in', description: 'Gestiona los check-in y check-out' },
-  { id: 'huesped', name: 'Huésped', description: 'Acceso de huésped' },
-  { id: 'limpieza', name: 'Limpieza', description: 'Gestiona tareas de limpieza' },
-  { id: 'mantenimiento', name: 'Mantenimiento', description: 'Gestiona tareas de mantenimiento' },
-]
-
-export function getUserTypeName(typeId: string) {
-  const type = USER_TYPES.find(t => t.id === typeId)
-  return type ? type.name : typeId
 }
 
 const getUserTypeColor = (typeId: string) => {

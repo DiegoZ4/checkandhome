@@ -5,7 +5,7 @@ import { Users, User, Mail, Phone, Lock, ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import { USER_TYPES } from '../page'
+import { USER_TYPES } from '@/lib/userTypes'
 
 function NewUserForm() {
   const [loading, setLoading] = useState(false)
@@ -47,8 +47,9 @@ function NewUserForm() {
         username: found.username,
         phone: found.phone,
         email: found.email,
-        password: found.password,
-        confirmPassword: found.password,
+        // La base no devuelve contraseñas (se guardan hasheadas): vacío = no cambiarla.
+        password: '',
+        confirmPassword: '',
         enabled: found.enabled,
       })
     } catch (error) {
@@ -99,7 +100,7 @@ function NewUserForm() {
     }
 
     if (!userData.password) {
-      newErrors.password = 'La contraseña es obligatoria'
+      if (!editingId) newErrors.password = 'La contraseña es obligatoria'
     } else if (userData.password.length < 6) {
       newErrors.password = 'La contraseña debe tener al menos 6 caracteres'
     }
@@ -141,7 +142,7 @@ function NewUserForm() {
         username: userData.username.trim(),
         phone: userData.phone.trim(),
         email: userData.email.trim(),
-        password: userData.password, // Nota: demo; en producción debe hashearse en el backend
+        password: userData.password, // el servidor la guarda hasheada; vacío al editar = se conserva la actual
         enabled: userData.enabled,
         createdAt: editingId ? editingCreatedAt : new Date().toISOString()
       }
@@ -392,7 +393,7 @@ function NewUserForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                    Contraseña *
+                    Contraseña {editingId ? '' : '*'}
                   </label>
                   <div className="mt-1">
                     <input
@@ -404,7 +405,7 @@ function NewUserForm() {
                       className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black ${
                         errors.password ? 'border-red-300' : ''
                       }`}
-                      placeholder="••••••••"
+                      placeholder={editingId ? 'Dejar vacío para no cambiarla' : '••••••••'}
                     />
                   </div>
                   {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
@@ -412,7 +413,7 @@ function NewUserForm() {
 
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                    Confirmar contraseña *
+                    Confirmar contraseña {editingId ? '' : '*'}
                   </label>
                   <div className="mt-1">
                     <input

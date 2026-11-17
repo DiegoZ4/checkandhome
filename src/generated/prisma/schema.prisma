@@ -1,8 +1,11 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Base de datos de Check and Point.
+//
+// Las tablas reflejan los datos que realmente usa la UI (src/lib/properties.ts,
+// rates.ts, reservations.ts, y las páginas de gastos/inventario/usuarios).
+// Los IDs numéricos (Date.now()) se guardan como BigInt.
+// Campos anidados (camas, comodidades, cargos, banco, fotos, descuentos) van en
+// columnas Json. `extra` guarda cualquier campo que la UI agregue y que todavía
+// no tenga columna propia, para no perder datos.
 
 generator client {
   provider = "prisma-client-js"
@@ -13,241 +16,239 @@ datasource db {
   provider = "sqlite"
 }
 
-enum UserRole {
-  ADMIN
-  GUEST
-  OWNER
-  CLEANER
-  CHECKINOUT
-}
-
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  password  String
-  role      UserRole @default(GUEST)
-  phone     String?
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           BigInt   @id
+  userType     String // admin | reservas | propietarios | checkin | huesped | limpieza | mantenimiento
+  username     String
+  name         String
+  lastName     String
+  phone        String
+  email        String   @unique
+  passwordHash String
+  enabled      Boolean  @default(true)
+  extra        Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  // Relations
-  ownedUnits      Unit[]       @relation("OwnerUnits")
-  bookings        Booking[]
-  cleaningTasks   Cleaning[]
-  checkInOutTasks CheckInOut[]
-  expenses        Expense[]
-
+  @@index([username])
   @@map("users")
 }
 
-model Amenity {
-  id   String  @id @default(cuid())
-  name String  @unique
-  logo String?
-
-  // Relations
-  units UnitAmenity[]
-
-  @@map("amenities")
-}
-
-model Unit {
-  id          String  @id @default(cuid())
+model Property {
+  id          BigInt @id
+  category    String
   name        String
-  description String?
+  zona        String
   address     String
-  pricePerDay Float // Price in USD
-  currency    String  @default("USD")
-  active      Boolean @default(true)
-  ownerId     String
+  number      String
+  floor       String
+  apartment   String
+  description String
 
-  // Relations
-  owner        User           @relation("OwnerUnits", fields: [ownerId], references: [id])
-  amenities    UnitAmenity[]
-  photos       UnitPhoto[]
-  bookings     Booking[]
-  availability Availability[]
-  inventory    Inventory[]
-  cleanings    Cleaning[]
-  checkInOuts  CheckInOut[]
-  expenses     Expense[]
+  // Detalles
+  bedrooms     String
+  bathrooms    String
+  maxGuests    String
+  propertyType String
+  ambientes    String
 
-  @@map("units")
-}
+  // Horarios
+  checkInFrom  String
+  checkInTo    String
+  checkOutFrom String
+  checkOutTo   String
 
-model UnitAmenity {
-  unitId    String
-  amenityId String
+  beds             Json // Record<bedType, BedConfig>
+  amenities        Json // Record<amenityId, boolean>
+  mtsDelMar        String
+  mascotasCantidad String
 
-  unit    Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  amenity Amenity @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+  // Cargos
+  chargesCurrency String
+  charges         Json // { limpieza, servicio, mascotas, cochera, deposito, depositoJoven }
 
-  @@id([unitId, amenityId])
-  @@map("unit_amenities")
-}
+  // WIFI
+  wifiNetwork  String
+  wifiPassword String
 
-model UnitPhoto {
-  id        String  @id @default(cuid())
-  unitId    String
-  url       String
-  caption   String?
-  order     Int     @default(0)
-  isPrimary Boolean @default(false)
+  // Llaves
+  keysCount     String
+  electronicKey Boolean
+  keyCode       String
 
-  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
-
-  @@map("unit_photos")
-}
-
-model Availability {
-  id        String   @id @default(cuid())
-  unitId    String
-  date      DateTime
-  available Boolean  @default(true)
-  price     Float? // Override daily price for specific dates
-  minStay   Int? // Minimum stay for this date
-  maxStay   Int? // Maximum stay for this date
-  notes     String?
-
-  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
-
-  @@unique([unitId, date])
-  @@map("availability")
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
-  COMPLETED
-  CHECKEDIN
-  CHECKEDOUT
-}
-
-enum BookingSource {
-  DIRECT
-  AIRBNB
-  BOOKING_COM
-  OTHER
-}
-
-model Booking {
-  id              String        @id @default(cuid())
-  unitId          String
-  guestId         String
-  checkIn         DateTime
-  checkOut        DateTime
-  totalPrice      Float
-  currency        String        @default("USD")
-  status          BookingStatus @default(PENDING)
-  source          BookingSource @default(DIRECT)
-  externalId      String? // ID from channel manager (Airbnb, Booking.com)
-  guestName       String
-  guestEmail      String
-  guestPhone      String?
-  numberOfGuests  Int           @default(1)
-  specialRequests String?
-  notes           String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  // Relations
-  unit        Unit         @relation(fields: [unitId], references: [id])
-  guest       User         @relation(fields: [guestId], references: [id])
-  cleanings   Cleaning[]
-  checkInOuts CheckInOut[]
-
-  @@map("bookings")
-}
-
-model Cleaning {
-  id        String    @id @default(cuid())
-  unitId    String
-  bookingId String?
-  cleanerId String
-  scheduled DateTime
-  completed DateTime?
-  notes     String?
-  cost      Float?
-  createdAt DateTime  @default(now())
-
-  // Relations
-  unit    Unit     @relation(fields: [unitId], references: [id])
-  booking Booking? @relation(fields: [bookingId], references: [id])
-  cleaner User     @relation(fields: [cleanerId], references: [id])
-
-  @@map("cleanings")
-}
-
-model CheckInOut {
-  id        String    @id @default(cuid())
+  // IDs externos (channel manager)
   bookingId String
-  unitId    String
-  staffId   String
-  type      String // "CHECK_IN" or "CHECK_OUT"
-  scheduled DateTime
-  completed DateTime?
-  notes     String?
+  airbnbId  String
+
+  bank   Json // cuenta bancaria del propietario
+  photos Json // string[]
+
+  enabled   Boolean   @default(true)
+  eliminado Boolean   @default(false)
   createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  updatedAt DateTime  @updatedAt
+  extra     Json?
 
-  // Relations
-  booking Booking @relation(fields: [bookingId], references: [id])
-  unit    Unit    @relation(fields: [unitId], references: [id])
-  staff   User    @relation(fields: [staffId], references: [id])
+  @@index([eliminado])
+  @@map("properties")
+}
 
-  @@map("check_in_outs")
+model Reservation {
+  id           BigInt @id
+  status       String // CONFIRMADA | PENDIENTE | CANCELADA
+  propertyId   String
+  propertyName String
+
+  checkInDate  String // YYYY-MM-DD
+  checkOutDate String // YYYY-MM-DD
+  checkInTime  String
+  checkOutTime String
+  guests       Int
+
+  // Huésped
+  firstName      String
+  lastName       String
+  phone          String
+  docType        String
+  dni            String
+  hasAttachment  Boolean
+  attachmentName String
+  dniException   Boolean
+  senaException  Boolean
+
+  hasPaymentProof  Boolean
+  paymentProofName String
+  hasVideo         Boolean
+  videoName        String
+  observaciones    String
+
+  // Valor
+  currency    String
+  channel     String // DIRECTA | BOOKING | AIRBNB
+  condition   String
+  nights      Int
+  valorNoches Float
+
+  mascotasEnabled Boolean
+  mascotasQty     Int
+  mascotasValue   Float
+
+  cocheraEnabled Boolean
+  cocheraId      String
+  cocheraValue   Float
+
+  descuento  Float
+  totalNeto  Float
+  cargos     Float
+  totalBruto Float
+  senaPct    Float
+  senaValue  Float
+  restante   Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  extra     Json?
+
+  @@index([propertyId])
+  @@index([checkInDate])
+  @@map("reservations")
+}
+
+// Calendario de tarifas/disponibilidad: una fila por propiedad y día.
+model RateEntry {
+  propertyId  String
+  date        String // YYYY-MM-DD (hora local)
+  price       Float
+  available   Boolean
+  status      String? // abierto | cerrado | cerrado24
+  closedUntil String?
+  planIds     Json // string[]
+  updatedAt   DateTime @updatedAt
+  extra       Json?
+
+  @@id([propertyId, date])
+  @@map("rate_entries")
+}
+
+model RatePlan {
+  id                 String   @id
+  name               String
+  description        String
+  color              String?
+  hasMinNights       Boolean
+  minNights          Int
+  hasPerDayNights    Boolean
+  perDayNights       Json // Record<weekday, string>
+  priceVariation     String
+  priceVariationType String // aumento | reduccion
+  hasStayDiscount    Boolean
+  stayDiscounts      Json // { duration, percent }[]
+  proximityDiscounts Json // { days, percent }[]
+  weekendSurcharge   String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  extra              Json?
+
+  @@map("rate_plans")
 }
 
 model Expense {
-  id          String   @id @default(cuid())
-  userId      String
-  unitId      String?
+  id          BigInt   @id
   description String
   amount      Float
-  currency    String   @default("USD")
-  category    String? // "MAINTENANCE", "SUPPLIES", "UTILITIES", etc.
-  date        DateTime @default(now())
-  receipt     String? // URL to receipt image
+  date        String // YYYY-MM-DD
+  category    String
+  unit        String // nombre de la propiedad o "General"
+  receipt     String?
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  extra       Json?
 
-  // Relations
-  user User  @relation(fields: [userId], references: [id])
-  unit Unit? @relation(fields: [unitId], references: [id])
-
+  @@index([date])
   @@map("expenses")
 }
 
-model Inventory {
-  id          String   @id @default(cuid())
-  unitId      String
-  name        String
-  description String?
-  quantity    Int      @default(0)
-  minQuantity Int      @default(0)
-  cost        Float?
-  supplier    String?
-  lastUpdated DateTime @updatedAt
-  createdAt   DateTime @default(now())
+model InventoryItem {
+  id            BigInt   @id
+  name          String
+  category      String
+  currentStock  Float
+  minStock      Float
+  maxStock      Float
+  unit          String
+  location      String
+  cost          Float
+  supplier      String?
+  lastRestocked String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  extra         Json?
 
-  // Relations
-  unit         Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  consumptions Consumption[]
-
-  @@map("inventory")
+  @@map("inventory_items")
 }
 
-model Consumption {
-  id          String   @id @default(cuid())
-  inventoryId String
-  quantity    Int
-  notes       String?
-  consumedAt  DateTime @default(now())
-  createdAt   DateTime @default(now())
+// Configuración (settings de usuario, canales, secreto de auth, etc.)
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
 
-  // Relations
-  inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  @@map("app_settings")
+}
 
-  @@map("consumptions")
+// Fotos (de propiedades y cocheras). Se guardan los bytes en la base, ya comprimidos;
+// la propiedad guarda sólo la URL /api/photos/<id>.
+model Photo {
+  id         String   @id // aleatorio, no adivinable
+  propertyId String? // null mientras no se guardó la propiedad (se limpia a las 24h)
+  mimeType   String
+  size       Int
+  width      Int?
+  height     Int?
+  data       Bytes
+  createdAt  DateTime @default(now())
+
+  @@index([propertyId])
+  @@map("photos")
 }

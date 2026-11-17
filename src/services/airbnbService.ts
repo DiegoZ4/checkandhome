@@ -230,16 +230,10 @@ export class AirbnbService {
         updatedAt: booking.updatedAt
       }))
 
-      // Guardar en localStorage (en producción sería en base de datos)
-      const existingUnits = JSON.parse(localStorage.getItem(STORAGE_KEYS.UNITS) || '[]')
-      const existingBookings = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOKINGS) || '[]')
-
-      // Merge de datos sin duplicados
-      const updatedUnits = this.mergeData(existingUnits, localUnits, 'externalId')
-      const updatedBookings = this.mergeData(existingBookings, localBookings, 'externalId')
-
-      localStorage.setItem(STORAGE_KEYS.UNITS, JSON.stringify(updatedUnits))
-      localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(updatedBookings))
+      // IMPORTANTE: getListings/getBookings devuelven datos SIMULADOS. No se guardan:
+      // propiedades y reservas ahora viven en la base de datos real y estos objetos
+      // tampoco tienen el formato de Property/Reservation. Cuando exista la integración
+      // real, el import debe hacerse del lado del servidor (API) mapeando a esos modelos.
 
       return {
         listings: localUnits.length,

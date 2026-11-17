@@ -14,6 +14,17 @@ const STAY_DURATIONS = [
   '1 semana', '10 días', '2 semanas',
 ]
 
+// Separador entre grupos de campos, calcado del wireframe (línea + "···" al centro).
+function SectionDivider() {
+  return (
+    <div className="flex items-center" aria-hidden="true">
+      <div className="flex-1 border-t border-gray-200" />
+      <span className="mx-3 text-gray-300 text-xs tracking-widest select-none">•••</span>
+      <div className="flex-1 border-t border-gray-200" />
+    </div>
+  )
+}
+
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
   return (
     <button
@@ -185,6 +196,8 @@ export default function NewRatePlanPage() {
               </div>
             </div>
 
+            <SectionDivider />
+
             {/* Mínimo de noches */}
             <div>
               <div className="flex items-center gap-3">
@@ -238,6 +251,8 @@ export default function NewRatePlanPage() {
                 </div>
               )}
             </div>
+
+            <SectionDivider />
 
             {/* Variación del precio */}
             <div>
@@ -330,6 +345,8 @@ export default function NewRatePlanPage() {
               )}
             </div>
 
+            <SectionDivider />
+
             {/* Descuento por proximidad */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Descuento por proximidad</label>
@@ -372,6 +389,8 @@ export default function NewRatePlanPage() {
                 </button>
               </div>
             </div>
+
+            <SectionDivider />
 
             {/* Aumento por fin de semana */}
             <div>

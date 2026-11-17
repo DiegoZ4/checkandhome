@@ -17,6 +17,7 @@ import {
   PropertyCategory,
   BedConfig,
 } from '@/lib/properties'
+import { uploadPhotos } from '@/lib/photoUpload'
 
 function AlojamientoForm() {
   const router = useRouter()
@@ -165,18 +166,17 @@ function AlojamientoForm() {
     }
   }
 
+  const [uploadingPhotos, setUploadingPhotos] = useState(0)
+
+  // Las fotos se suben a la base al elegirlas; la propiedad guarda sólo sus URLs.
   const handlePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
-    if (!files) return
-    const readers = Array.from(files).map(
-      file =>
-        new Promise<string>((resolve) => {
-          const reader = new FileReader()
-          reader.onload = () => resolve(reader.result as string)
-          reader.readAsDataURL(file)
-        })
-    )
-    Promise.all(readers).then(results => setPhotos(prev => [...prev, ...results]))
+    if (!files || !files.length) return
+    const list = Array.from(files)
+    setUploadingPhotos(n => n + list.length)
+    uploadPhotos(list)
+      .then(urls => setPhotos(prev => [...prev, ...urls]))
+      .finally(() => setUploadingPhotos(n => n - list.length))
     // Permitir volver a seleccionar el mismo archivo después de borrarlo
     e.target.value = ''
   }
@@ -656,8 +656,9 @@ function AlojamientoForm() {
                   <label className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer">
                     <ImageIcon className="h-4 w-4 mr-2" />
                     + Agregar Fotos
-                    <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotos} />
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={handlePhotos} />
                   </label>
+                  {uploadingPhotos > 0 && <p className="mt-2 text-sm text-gray-500">Subiendo {uploadingPhotos} foto(s)...</p>}
                   {photos.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-4">
                       {photos.map((src, i) => (
@@ -702,7 +703,7 @@ function AlojamientoForm() {
             </Link>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploadingPhotos > 0}
               className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -735,18 +736,17 @@ function CocheraForm() {
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }))
   }
 
+  const [uploadingPhotos, setUploadingPhotos] = useState(0)
+
+  // Las fotos se suben a la base al elegirlas; la propiedad guarda sólo sus URLs.
   const handlePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
-    if (!files) return
-    const readers = Array.from(files).map(
-      file =>
-        new Promise<string>((resolve) => {
-          const reader = new FileReader()
-          reader.onload = () => resolve(reader.result as string)
-          reader.readAsDataURL(file)
-        })
-    )
-    Promise.all(readers).then(results => setPhotos(prev => [...prev, ...results]))
+    if (!files || !files.length) return
+    const list = Array.from(files)
+    setUploadingPhotos(n => n + list.length)
+    uploadPhotos(list)
+      .then(urls => setPhotos(prev => [...prev, ...urls]))
+      .finally(() => setUploadingPhotos(n => n - list.length))
     e.target.value = ''
   }
 
@@ -874,8 +874,9 @@ function CocheraForm() {
                 <label className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer">
                   <ImageIcon className="h-4 w-4 mr-2" />
                   + Agregar Fotos
-                  <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotos} />
+                  <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={handlePhotos} />
                 </label>
+                {uploadingPhotos > 0 && <p className="mt-2 text-sm text-gray-500">Subiendo {uploadingPhotos} foto(s)...</p>}
                 {photos.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-4">
                     {photos.map((src, i) => (
@@ -906,7 +907,7 @@ function CocheraForm() {
             </Link>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploadingPhotos > 0}
               className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (

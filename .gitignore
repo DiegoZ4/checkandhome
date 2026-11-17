@@ -48,3 +48,9 @@ CLAUDE.md
 # Archivos descargados / materiales externos
 download*
 prompts-exactos*
+
+# Base de datos SQLite (datos reales, NO versionar)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

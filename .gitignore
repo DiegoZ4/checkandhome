@@ -54,3 +54,6 @@ prompts-exactos*
 *.db-journal
 *.db-wal
 *.db-shm
+
+# Archivos subidos (videos de reservas). Datos reales, NO versionar; incluir en el backup.
+/storage/

@@ -197,6 +197,7 @@ exports.Prisma.ReservationScalarFieldEnum = {
   paymentProofName: 'paymentProofName',
   hasVideo: 'hasVideo',
   videoName: 'videoName',
+  videoUrl: 'videoUrl',
   observaciones: 'observaciones',
   currency: 'currency',
   channel: 'channel',
@@ -300,6 +301,15 @@ exports.Prisma.PhotoScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.VideoScalarFieldEnum = {
+  id: 'id',
+  reservationId: 'reservationId',
+  fileName: 'fileName',
+  mimeType: 'mimeType',
+  size: 'size',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -340,7 +350,8 @@ exports.Prisma.ModelName = {
   Expense: 'Expense',
   InventoryItem: 'InventoryItem',
   AppSetting: 'AppSetting',
-  Photo: 'Photo'
+  Photo: 'Photo',
+  Video: 'Video'
 };
 
 /**

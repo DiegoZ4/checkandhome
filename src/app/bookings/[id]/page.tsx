@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, ArrowLeft, Edit } from 'lucide-react'
+import { Calendar, ArrowLeft, Edit, Download } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
@@ -157,7 +157,17 @@ export default function ReservationDetailPage() {
             <Section title="Comprobante de pago / Observaciones">
               <div className="grid grid-cols-1 gap-6">
                 <Field label="Comprobante de pago" value={r.hasPaymentProof ? (r.paymentProofName || 'Sí') : 'No'} />
-                <Field label="Video" value={r.hasVideo ? (r.videoName || 'Sí') : 'No'} />
+                <div>
+                  <Field label="Video" value={r.hasVideo ? (r.videoName || 'Sí') : 'No'} />
+                  {r.videoUrl && (
+                    <>
+                      <video src={r.videoUrl} controls preload="metadata" className="mt-2 w-full max-h-96 rounded-md bg-black" />
+                      <a href={`${r.videoUrl}?download=1`} className="mt-2 inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                        <Download className="h-4 w-4 mr-1" /> Descargar video
+                      </a>
+                    </>
+                  )}
+                </div>
                 {r.observaciones && (
                   <div>
                     <p className="text-xs font-medium text-gray-500">Observaciones / Notas</p>

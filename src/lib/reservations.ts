@@ -70,9 +70,11 @@ export interface Reservation {
 
   hasPaymentProof: boolean
   paymentProofName: string
-  // Solo se guarda el nombre del archivo, no el contenido (ver hasAttachment/hasPaymentProof).
+  // DNI y comprobante: solo se guarda el nombre del archivo, no el contenido.
   hasVideo: boolean
   videoName: string
+  // El video sí se sube al servidor: URL /api/videos/<id> (vacío en reservas viejas).
+  videoUrl?: string
   observaciones: string
 
   // Valor de la reserva

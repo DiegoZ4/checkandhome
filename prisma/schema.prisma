@@ -121,6 +121,7 @@ model Reservation {
   paymentProofName String
   hasVideo         Boolean
   videoName        String
+  videoUrl         String  @default("") // /api/videos/<id> (tabla videos)
   observaciones    String
 
   // Valor
@@ -251,4 +252,19 @@ model Photo {
 
   @@index([propertyId])
   @@map("photos")
+}
+
+// Videos de reservas. La fila guarda los datos del video; el archivo (pesado, se sirve
+// por partes para poder adelantarlo) va en storage/videos/<id>. La reserva guarda la
+// URL /api/videos/<id>.
+model Video {
+  id            String   @id // aleatorio, no adivinable
+  reservationId String? // null mientras no se guardó la reserva (se limpia a las 24h)
+  fileName      String
+  mimeType      String
+  size          Int
+  createdAt     DateTime @default(now())
+
+  @@index([reservationId])
+  @@map("videos")
 }

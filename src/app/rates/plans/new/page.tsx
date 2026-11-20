@@ -17,10 +17,11 @@ const STAY_DURATIONS = [
 // Separador entre grupos de campos, calcado del wireframe (línea + "···" al centro).
 function SectionDivider() {
   return (
-    <div className="flex items-center" aria-hidden="true">
-      <div className="flex-1 border-t border-gray-200" />
-      <span className="mx-3 text-gray-300 text-xs tracking-widest select-none">•••</span>
-      <div className="flex-1 border-t border-gray-200" />
+    // Doble línea centrada con "•••" entre las dos líneas (como en el diseño).
+    <div className="mx-auto w-full max-w-lg py-2" aria-hidden="true">
+      <div className="flex h-2.5 items-center justify-center border-y border-gray-500">
+        <span className="text-[9px] leading-none tracking-[0.2em] text-gray-700 select-none">•••</span>
+      </div>
     </div>
   )
 }

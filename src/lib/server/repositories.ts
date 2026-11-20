@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { BadItemError, FieldSpec, fromRow, Item, toBigId, toRow } from './mapping'
 import { deletePhotosOf, linkPhotos, normalizePhotoList } from './photos'
+import { deleteVideosOf, linkVideo } from './videos'
 
 /**
  * Repositorios por entidad. Todos exponen la misma interfaz:
@@ -76,11 +77,11 @@ export const properties: Collection = {
 
 // ---------- Reservas ----------
 
-export const reservations = numericIdCollection(prisma.reservation as unknown as Delegate, {
+const reservationRows = numericIdCollection(prisma.reservation as unknown as Delegate, {
   str: [
     'status', 'propertyId', 'propertyName', 'checkInDate', 'checkOutDate', 'checkInTime', 'checkOutTime',
     'firstName', 'lastName', 'phone', 'docType', 'dni', 'attachmentName', 'paymentProofName', 'videoName',
-    'observaciones', 'currency', 'channel', 'condition', 'cocheraId',
+    'videoUrl', 'observaciones', 'currency', 'channel', 'condition', 'cocheraId',
   ],
   int: ['guests', 'nights', 'mascotasQty'],
   float: [
@@ -93,6 +94,17 @@ export const reservations = numericIdCollection(prisma.reservation as unknown as
   },
   date: ['createdAt'],
 })
+
+// El video subido (tabla `videos` + archivo) se asocia a la reserva al guardarla; si la
+// reserva cambia de video o se borra, el anterior se elimina.
+export const reservations: Collection = {
+  list: () => reservationRows.list(),
+  async apply({ upsert = [], delete: del = [] }) {
+    await reservationRows.apply({ upsert, delete: del })
+    for (const item of upsert) await linkVideo(String(item.id), item.videoUrl)
+    await deleteVideosOf(del)
+  },
+}
 
 // ---------- Gastos ----------
 

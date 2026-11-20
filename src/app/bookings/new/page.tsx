@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState, useEffect, useMemo } from 'react'
-import { Calendar, ArrowLeft, Save, Paperclip, User, Search, Video as VideoIcon } from 'lucide-react'
+import { Calendar, ArrowLeft, Save, Paperclip, User, Search, Video as VideoIcon, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
@@ -19,6 +19,7 @@ import {
   RESERVATION_STATUSES,
   Reservation,
 } from '@/lib/reservations'
+import { MAX_VIDEO_MB, uploadVideo } from '@/lib/videoUpload'
 
 function BookingForm() {
   const router = useRouter()
@@ -79,6 +80,9 @@ function BookingForm() {
   const [paymentProofName, setPaymentProofName] = useState('')
   const [hasVideo, setHasVideo] = useState(false)
   const [videoName, setVideoName] = useState('')
+  const [videoUrl, setVideoUrl] = useState('')
+  // Porcentaje de subida del video; null cuando no se está subiendo nada.
+  const [videoProgress, setVideoProgress] = useState<number | null>(null)
 
   // Modo edición: si hay ?id=, precargamos los datos de la reserva existente.
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -124,6 +128,7 @@ function BookingForm() {
     setPaymentProofName(found.paymentProofName)
     setHasVideo(found.hasVideo)
     setVideoName(found.videoName)
+    setVideoUrl(found.videoUrl || '')
   }, [editIdParam])
 
   const selectedProperty = properties.find(p => String(p.id) === data.propertyId)
@@ -178,12 +183,29 @@ function BookingForm() {
     }
   }
 
-  const handleVideoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
+  // El video se sube al servidor apenas se elige; la reserva guarda su URL.
+  const handleVideoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target
+    const file = input.files?.[0]
+    if (!file) return
+    setVideoProgress(0)
+    try {
+      const url = await uploadVideo(file, setVideoProgress)
       setHasVideo(true)
       setVideoName(file.name)
+      setVideoUrl(url)
+    } catch (err) {
+      alert(`No se pudo subir el video: ${(err as Error).message}`)
+    } finally {
+      setVideoProgress(null)
+      input.value = '' // permite volver a elegir el mismo archivo
     }
+  }
+
+  const removeVideo = () => {
+    setHasVideo(false)
+    setVideoName('')
+    setVideoUrl('')
   }
 
   // ---- Cálculos en vivo ----
@@ -258,6 +280,7 @@ function BookingForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (videoProgress !== null) return // esperar a que termine de subir el video
     if (!validateForm()) {
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
@@ -288,6 +311,7 @@ function BookingForm() {
         paymentProofName,
         hasVideo,
         videoName,
+        videoUrl,
         observaciones: data.observaciones.trim(),
         currency: data.currency,
         channel: data.channel,
@@ -690,16 +714,51 @@ function BookingForm() {
 
               <div className="flex items-center justify-between mt-6">
                 <label className="block text-sm font-medium text-gray-700">Video</label>
-                <label className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer">
+                <label
+                  className={`inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 ${
+                    videoProgress !== null ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                >
                   <VideoIcon className="h-4 w-4 mr-2" />
-                  + Agregar video
-                  <input type="file" accept="video/*" className="hidden" onChange={handleVideoFile} />
+                  {hasVideo ? 'Cambiar video' : '+ Agregar video'}
+                  <input
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    disabled={videoProgress !== null}
+                    onChange={handleVideoFile}
+                  />
                 </label>
               </div>
-              {hasVideo && (
-                <p className="mt-3 text-sm text-green-600">Video adjunto: {videoName}</p>
+              {videoProgress !== null && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs text-gray-600 mb-1">
+                    <span>Subiendo video...</span>
+                    <span>{videoProgress}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+                    <div className="h-full bg-indigo-600 transition-all" style={{ width: `${videoProgress}%` }} />
+                  </div>
+                </div>
               )}
-              <p className="mt-1 text-xs text-gray-500">Se guarda el nombre del archivo como referencia; el video no queda almacenado en el sistema.</p>
+              {hasVideo && videoProgress === null && (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-green-600 truncate">Video adjunto: {videoName}</p>
+                    <button type="button" onClick={removeVideo} className="inline-flex items-center text-sm text-red-600 hover:text-red-800 shrink-0">
+                      <Trash2 className="h-4 w-4 mr-1" /> Quitar
+                    </button>
+                  </div>
+                  {videoUrl ? (
+                    <video src={videoUrl} controls preload="metadata" className="mt-2 w-full max-h-80 rounded-md bg-black" />
+                  ) : (
+                    <p className="mt-1 text-xs text-amber-600">
+                      Este video se cargó antes de que el sistema guardara videos: solo quedó el nombre. Volvé a subirlo para guardarlo.
+                    </p>
+                  )}
+                </div>
+              )}
+              <p className="mt-1 text-xs text-gray-500">El video se guarda en el sistema (máximo {MAX_VIDEO_MB} MB).</p>
 
               <div className="mt-6">
                 <label htmlFor="observaciones" className="block text-sm font-medium text-gray-700">Observaciones / Notas</label>
@@ -713,7 +772,7 @@ function BookingForm() {
             <Link href="/bookings" className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700">
               Cancelar
             </Link>
-            <button type="submit" disabled={loading} className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={loading || videoProgress !== null} className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" /> : <Save className="h-5 w-5 mr-2" />}
               {loading ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Guardar'}
             </button>

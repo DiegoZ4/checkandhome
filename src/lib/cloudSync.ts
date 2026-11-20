@@ -36,6 +36,8 @@ export const COLLECTIONS: CollectionConfig[] = [
   { key: 'checkAndPointInventory', kind: 'array', endpoint: '/api/inventory' },
   { key: 'checkAndPointUsers', kind: 'array', endpoint: '/api/users' },
   { key: 'checkAndPointRatePlans', kind: 'array', endpoint: '/api/rate-plans' },
+  { key: 'checkAndPointChargeCategories', kind: 'array', endpoint: '/api/charge-categories' },
+  { key: 'checkAndPointPetCharges', kind: 'value', endpoint: '/api/settings/petCharges' },
   { key: 'checkAndPointRates', kind: 'rates', endpoint: '/api/rates' },
   { key: 'checkAndPointUserSettings', kind: 'value', endpoint: '/api/settings/userSettings' },
   { key: 'checkAndPointChannelConfig', kind: 'value', endpoint: '/api/settings/channelConfig' },

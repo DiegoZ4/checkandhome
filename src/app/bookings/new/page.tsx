@@ -18,8 +18,15 @@ import {
   SENA_OPTIONS,
   RESERVATION_STATUSES,
   Reservation,
+  findOverlaps,
 } from '@/lib/reservations'
+import { pullFromServer } from '@/lib/cloudSync'
+import { resolvePropertyCharges } from '@/lib/chargeCategories'
+
+// "2026-11-17" -> "17/11"
+const shortDate = (d: string) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}` : '?')
 import { MAX_VIDEO_MB, uploadVideo } from '@/lib/videoUpload'
+import TimeSelect from '@/components/TimeSelect'
 
 function BookingForm() {
   const router = useRouter()
@@ -31,6 +38,8 @@ function BookingForm() {
 
   const [properties, setProperties] = useState<Property[]>([])
   const [cocheras, setCocheras] = useState<Property[]>([])
+  // Todas las reservas, para avisar si las fechas elegidas ya están ocupadas.
+  const [allReservations, setAllReservations] = useState<Reservation[]>([])
 
   // Excepción de DNI: solo un admin puede confirmar una reserva Directa/Booking sin el archivo.
   const [isAdmin, setIsAdmin] = useState(false)
@@ -39,6 +48,7 @@ function BookingForm() {
     const all = loadProperties().filter(p => !p.eliminado)
     setProperties(all.filter(p => (p.category || 'alojamiento') === 'alojamiento'))
     setCocheras(all.filter(p => p.category === 'cochera'))
+    setAllReservations(loadReservations())
     try {
       const storedUser = JSON.parse(localStorage.getItem('checkAndPointUser') || 'null')
       setIsAdmin(!!storedUser?.role && storedUser.role.toLowerCase().includes('admin'))
@@ -215,8 +225,11 @@ function BookingForm() {
     const nights = calcNights(data.checkInDate, data.checkOutDate)
     const valorNoches = num(data.valorNoches)
 
+    // Limpieza, servicio y mascotas: precios actuales de las categorías del alojamiento.
+    const categoryCharges = selectedProperty ? resolvePropertyCharges(selectedProperty) : null
+
     // Cargos de mascotas y cochera tomados de la propiedad seleccionada.
-    const mascotasUnit = selectedProperty ? num(selectedProperty.charges.mascotas) : 0
+    const mascotasUnit = categoryCharges ? categoryCharges.mascotas : 0
     const mascotasValue = data.mascotasEnabled ? mascotasUnit * (parseInt(data.mascotasQty) || 0) : 0
     const cocheraValue = data.cocheraEnabled && selectedProperty ? num(selectedProperty.charges.cochera) : 0
 
@@ -228,9 +241,7 @@ function BookingForm() {
     const totalNeto = Math.max(0, valorNoches + extras - descuentoAmount)
 
     // Cargos (limpieza + servicio) tomados de la propiedad
-    const cargos = selectedProperty
-      ? num(selectedProperty.charges.limpieza) + num(selectedProperty.charges.servicio)
-      : 0
+    const cargos = categoryCharges ? categoryCharges.limpieza + categoryCharges.servicio : 0
 
     // Total BRUTO = total de la reserva + cargos
     const totalBruto = totalNeto + cargos
@@ -245,8 +256,31 @@ function BookingForm() {
   const money = (v: number) => v.toLocaleString('es-AR')
   const currencySymbol = data.currency === 'PESOS' ? '$' : 'US$'
 
-  const validateForm = () => {
+  // Reservas que chocan con las fechas elegidas (mismo alojamiento / misma cochera).
+  const overlapsFor = (list: Reservation[]) => ({
+    property: findOverlaps(list, {
+      field: 'propertyId', id: data.propertyId, checkIn: data.checkInDate, checkOut: data.checkOutDate, excludeId: editingId,
+    }),
+    cochera: data.cocheraEnabled
+      ? findOverlaps(list, {
+          field: 'cocheraId', id: data.cocheraId, checkIn: data.checkInDate, checkOut: data.checkOutDate, excludeId: editingId,
+        })
+      : [],
+  })
+  const overlaps = overlapsFor(allReservations)
+
+  const describeOverlap = (r: Reservation) =>
+    `${`${r.firstName} ${r.lastName}`.trim() || 'Sin nombre'} (${shortDate(r.checkInDate)} al ${shortDate(r.checkOutDate)}, ${r.status.toLowerCase()})`
+
+  const validateForm = (reservationsList: Reservation[] = allReservations) => {
     const newErrors: { [key: string]: string } = {}
+    const found = overlapsFor(reservationsList)
+    if (found.property.length) {
+      newErrors.checkInDate = `La propiedad ya está reservada en esas fechas: ${found.property.map(describeOverlap).join('; ')}`
+    }
+    if (found.cochera.length) {
+      newErrors.cocheraId = `La cochera ya está reservada en esas fechas: ${found.cochera.map(describeOverlap).join('; ')}`
+    }
     if (!data.propertyId) newErrors.propertyId = 'Selecciona una propiedad'
     if (!data.checkInDate) newErrors.checkInDate = 'Fecha de check-in obligatoria'
     if (!data.checkOutDate) newErrors.checkOutDate = 'Fecha de check-out obligatoria'
@@ -281,7 +315,13 @@ function BookingForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (videoProgress !== null) return // esperar a que termine de subir el video
-    if (!validateForm()) {
+    // Traer lo último del servidor (reservas hechas desde otra computadora) antes de validar.
+    setLoading(true)
+    await pullFromServer().catch(() => undefined)
+    setLoading(false)
+    const latest = loadReservations()
+    setAllReservations(latest)
+    if (!validateForm(latest)) {
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
@@ -473,13 +513,21 @@ function BookingForm() {
                 </div>
                 <div>
                   <label htmlFor="checkInTime" className="block text-sm font-medium text-gray-700">Horario check-in</label>
-                  <input type="time" id="checkInTime" name="checkInTime" value={data.checkInTime} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                  <TimeSelect id="checkInTime" className="mt-1" value={data.checkInTime} onChange={v => setData(prev => ({ ...prev, checkInTime: v }))} />
                 </div>
                 <div>
                   <label htmlFor="checkOutTime" className="block text-sm font-medium text-gray-700">Horario check-out</label>
-                  <input type="time" id="checkOutTime" name="checkOutTime" value={data.checkOutTime} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                  <TimeSelect id="checkOutTime" className="mt-1" value={data.checkOutTime} onChange={v => setData(prev => ({ ...prev, checkOutTime: v }))} />
                 </div>
               </div>
+              {overlaps.property.length > 0 && !errors.checkInDate && (
+                <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <p className="font-medium">La propiedad ya está reservada en esas fechas:</p>
+                  <ul className="mt-1 list-disc pl-5">
+                    {overlaps.property.map(r => <li key={r.id}>{describeOverlap(r)}</li>)}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 
@@ -627,6 +675,11 @@ function BookingForm() {
                         <option value="">Cocheras</option>
                         {cocheras.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
+                      {(errors.cocheraId || overlaps.cochera.length > 0) && (
+                        <p className="mt-2 text-sm text-red-600">
+                          {errors.cocheraId || `Ya está reservada en esas fechas: ${overlaps.cochera.map(describeOverlap).join('; ')}`}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

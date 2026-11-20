@@ -49,6 +49,11 @@ export type Expense = $Result.DefaultSelection<Prisma.$ExpensePayload>
  */
 export type InventoryItem = $Result.DefaultSelection<Prisma.$InventoryItemPayload>
 /**
+ * Model ChargeCategory
+ * 
+ */
+export type ChargeCategory = $Result.DefaultSelection<Prisma.$ChargeCategoryPayload>
+/**
  * Model AppSetting
  * 
  */
@@ -250,6 +255,16 @@ export class PrismaClient<
     * ```
     */
   get inventoryItem(): Prisma.InventoryItemDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.chargeCategory`: Exposes CRUD operations for the **ChargeCategory** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ChargeCategories
+    * const chargeCategories = await prisma.chargeCategory.findMany()
+    * ```
+    */
+  get chargeCategory(): Prisma.ChargeCategoryDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.appSetting`: Exposes CRUD operations for the **AppSetting** model.
@@ -721,6 +736,7 @@ export namespace Prisma {
     RatePlan: 'RatePlan',
     Expense: 'Expense',
     InventoryItem: 'InventoryItem',
+    ChargeCategory: 'ChargeCategory',
     AppSetting: 'AppSetting',
     Photo: 'Photo',
     Video: 'Video'
@@ -739,7 +755,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "property" | "reservation" | "rateEntry" | "ratePlan" | "expense" | "inventoryItem" | "appSetting" | "photo" | "video"
+      modelProps: "user" | "property" | "reservation" | "rateEntry" | "ratePlan" | "expense" | "inventoryItem" | "chargeCategory" | "appSetting" | "photo" | "video"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1261,6 +1277,80 @@ export namespace Prisma {
           }
         }
       }
+      ChargeCategory: {
+        payload: Prisma.$ChargeCategoryPayload<ExtArgs>
+        fields: Prisma.ChargeCategoryFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ChargeCategoryFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ChargeCategoryPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ChargeCategoryFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ChargeCategoryPayload>
+          }
+          findFirst: {
+            args: Prisma.ChargeCategoryFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ChargeCategoryPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ChargeCategoryFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ChargeCategoryPayload>
+          }
+          findMany: {
+            args: Prisma.ChargeCategoryFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ChargeCategoryPayload>[]
+          }
+          create: {
+            args: Prisma.ChargeCategoryCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ChargeCategoryPayload>
+          }
+          createMany: {
+            args: Prisma.ChargeCategoryCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.ChargeCategoryCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ChargeCategoryPayload>[]
+          }
+          delete: {
+            args: Prisma.ChargeCategoryDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ChargeCategoryPayload>
+          }
+          update: {
+            args: Prisma.ChargeCategoryUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ChargeCategoryPayload>
+          }
+          deleteMany: {
+            args: Prisma.ChargeCategoryDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ChargeCategoryUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.ChargeCategoryUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ChargeCategoryPayload>[]
+          }
+          upsert: {
+            args: Prisma.ChargeCategoryUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ChargeCategoryPayload>
+          }
+          aggregate: {
+            args: Prisma.ChargeCategoryAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateChargeCategory>
+          }
+          groupBy: {
+            args: Prisma.ChargeCategoryGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ChargeCategoryGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ChargeCategoryCountArgs<ExtArgs>
+            result: $Utils.Optional<ChargeCategoryCountAggregateOutputType> | number
+          }
+        }
+      }
       AppSetting: {
         payload: Prisma.$AppSettingPayload<ExtArgs>
         fields: Prisma.AppSettingFieldRefs
@@ -1598,6 +1688,7 @@ export namespace Prisma {
     ratePlan?: RatePlanOmit
     expense?: ExpenseOmit
     inventoryItem?: InventoryItemOmit
+    chargeCategory?: ChargeCategoryOmit
     appSetting?: AppSettingOmit
     photo?: PhotoOmit
     video?: VideoOmit
@@ -10322,6 +10413,1085 @@ export namespace Prisma {
 
 
   /**
+   * Model ChargeCategory
+   */
+
+  export type AggregateChargeCategory = {
+    _count: ChargeCategoryCountAggregateOutputType | null
+    _avg: ChargeCategoryAvgAggregateOutputType | null
+    _sum: ChargeCategorySumAggregateOutputType | null
+    _min: ChargeCategoryMinAggregateOutputType | null
+    _max: ChargeCategoryMaxAggregateOutputType | null
+  }
+
+  export type ChargeCategoryAvgAggregateOutputType = {
+    id: number | null
+    amount: number | null
+  }
+
+  export type ChargeCategorySumAggregateOutputType = {
+    id: bigint | null
+    amount: number | null
+  }
+
+  export type ChargeCategoryMinAggregateOutputType = {
+    id: bigint | null
+    type: string | null
+    name: string | null
+    zona: string | null
+    amount: number | null
+    currency: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type ChargeCategoryMaxAggregateOutputType = {
+    id: bigint | null
+    type: string | null
+    name: string | null
+    zona: string | null
+    amount: number | null
+    currency: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type ChargeCategoryCountAggregateOutputType = {
+    id: number
+    type: number
+    name: number
+    zona: number
+    amount: number
+    currency: number
+    createdAt: number
+    updatedAt: number
+    extra: number
+    _all: number
+  }
+
+
+  export type ChargeCategoryAvgAggregateInputType = {
+    id?: true
+    amount?: true
+  }
+
+  export type ChargeCategorySumAggregateInputType = {
+    id?: true
+    amount?: true
+  }
+
+  export type ChargeCategoryMinAggregateInputType = {
+    id?: true
+    type?: true
+    name?: true
+    zona?: true
+    amount?: true
+    currency?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type ChargeCategoryMaxAggregateInputType = {
+    id?: true
+    type?: true
+    name?: true
+    zona?: true
+    amount?: true
+    currency?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type ChargeCategoryCountAggregateInputType = {
+    id?: true
+    type?: true
+    name?: true
+    zona?: true
+    amount?: true
+    currency?: true
+    createdAt?: true
+    updatedAt?: true
+    extra?: true
+    _all?: true
+  }
+
+  export type ChargeCategoryAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ChargeCategory to aggregate.
+     */
+    where?: ChargeCategoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ChargeCategories to fetch.
+     */
+    orderBy?: ChargeCategoryOrderByWithRelationInput | ChargeCategoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ChargeCategoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ChargeCategories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ChargeCategories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned ChargeCategories
+    **/
+    _count?: true | ChargeCategoryCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: ChargeCategoryAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ChargeCategorySumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ChargeCategoryMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ChargeCategoryMaxAggregateInputType
+  }
+
+  export type GetChargeCategoryAggregateType<T extends ChargeCategoryAggregateArgs> = {
+        [P in keyof T & keyof AggregateChargeCategory]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateChargeCategory[P]>
+      : GetScalarType<T[P], AggregateChargeCategory[P]>
+  }
+
+
+
+
+  export type ChargeCategoryGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ChargeCategoryWhereInput
+    orderBy?: ChargeCategoryOrderByWithAggregationInput | ChargeCategoryOrderByWithAggregationInput[]
+    by: ChargeCategoryScalarFieldEnum[] | ChargeCategoryScalarFieldEnum
+    having?: ChargeCategoryScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ChargeCategoryCountAggregateInputType | true
+    _avg?: ChargeCategoryAvgAggregateInputType
+    _sum?: ChargeCategorySumAggregateInputType
+    _min?: ChargeCategoryMinAggregateInputType
+    _max?: ChargeCategoryMaxAggregateInputType
+  }
+
+  export type ChargeCategoryGroupByOutputType = {
+    id: bigint
+    type: string
+    name: string
+    zona: string
+    amount: number
+    currency: string
+    createdAt: Date
+    updatedAt: Date
+    extra: JsonValue | null
+    _count: ChargeCategoryCountAggregateOutputType | null
+    _avg: ChargeCategoryAvgAggregateOutputType | null
+    _sum: ChargeCategorySumAggregateOutputType | null
+    _min: ChargeCategoryMinAggregateOutputType | null
+    _max: ChargeCategoryMaxAggregateOutputType | null
+  }
+
+  type GetChargeCategoryGroupByPayload<T extends ChargeCategoryGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ChargeCategoryGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ChargeCategoryGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ChargeCategoryGroupByOutputType[P]>
+            : GetScalarType<T[P], ChargeCategoryGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ChargeCategorySelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    type?: boolean
+    name?: boolean
+    zona?: boolean
+    amount?: boolean
+    currency?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    extra?: boolean
+  }, ExtArgs["result"]["chargeCategory"]>
+
+  export type ChargeCategorySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    type?: boolean
+    name?: boolean
+    zona?: boolean
+    amount?: boolean
+    currency?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    extra?: boolean
+  }, ExtArgs["result"]["chargeCategory"]>
+
+  export type ChargeCategorySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    type?: boolean
+    name?: boolean
+    zona?: boolean
+    amount?: boolean
+    currency?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    extra?: boolean
+  }, ExtArgs["result"]["chargeCategory"]>
+
+  export type ChargeCategorySelectScalar = {
+    id?: boolean
+    type?: boolean
+    name?: boolean
+    zona?: boolean
+    amount?: boolean
+    currency?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    extra?: boolean
+  }
+
+  export type ChargeCategoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "type" | "name" | "zona" | "amount" | "currency" | "createdAt" | "updatedAt" | "extra", ExtArgs["result"]["chargeCategory"]>
+
+  export type $ChargeCategoryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "ChargeCategory"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: bigint
+      type: string
+      name: string
+      zona: string
+      amount: number
+      currency: string
+      createdAt: Date
+      updatedAt: Date
+      extra: Prisma.JsonValue | null
+    }, ExtArgs["result"]["chargeCategory"]>
+    composites: {}
+  }
+
+  type ChargeCategoryGetPayload<S extends boolean | null | undefined | ChargeCategoryDefaultArgs> = $Result.GetResult<Prisma.$ChargeCategoryPayload, S>
+
+  type ChargeCategoryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<ChargeCategoryFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: ChargeCategoryCountAggregateInputType | true
+    }
+
+  export interface ChargeCategoryDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['ChargeCategory'], meta: { name: 'ChargeCategory' } }
+    /**
+     * Find zero or one ChargeCategory that matches the filter.
+     * @param {ChargeCategoryFindUniqueArgs} args - Arguments to find a ChargeCategory
+     * @example
+     * // Get one ChargeCategory
+     * const chargeCategory = await prisma.chargeCategory.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ChargeCategoryFindUniqueArgs>(args: SelectSubset<T, ChargeCategoryFindUniqueArgs<ExtArgs>>): Prisma__ChargeCategoryClient<$Result.GetResult<Prisma.$ChargeCategoryPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one ChargeCategory that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {ChargeCategoryFindUniqueOrThrowArgs} args - Arguments to find a ChargeCategory
+     * @example
+     * // Get one ChargeCategory
+     * const chargeCategory = await prisma.chargeCategory.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ChargeCategoryFindUniqueOrThrowArgs>(args: SelectSubset<T, ChargeCategoryFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ChargeCategoryClient<$Result.GetResult<Prisma.$ChargeCategoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ChargeCategory that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ChargeCategoryFindFirstArgs} args - Arguments to find a ChargeCategory
+     * @example
+     * // Get one ChargeCategory
+     * const chargeCategory = await prisma.chargeCategory.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ChargeCategoryFindFirstArgs>(args?: SelectSubset<T, ChargeCategoryFindFirstArgs<ExtArgs>>): Prisma__ChargeCategoryClient<$Result.GetResult<Prisma.$ChargeCategoryPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ChargeCategory that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ChargeCategoryFindFirstOrThrowArgs} args - Arguments to find a ChargeCategory
+     * @example
+     * // Get one ChargeCategory
+     * const chargeCategory = await prisma.chargeCategory.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ChargeCategoryFindFirstOrThrowArgs>(args?: SelectSubset<T, ChargeCategoryFindFirstOrThrowArgs<ExtArgs>>): Prisma__ChargeCategoryClient<$Result.GetResult<Prisma.$ChargeCategoryPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more ChargeCategories that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ChargeCategoryFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all ChargeCategories
+     * const chargeCategories = await prisma.chargeCategory.findMany()
+     * 
+     * // Get first 10 ChargeCategories
+     * const chargeCategories = await prisma.chargeCategory.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const chargeCategoryWithIdOnly = await prisma.chargeCategory.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ChargeCategoryFindManyArgs>(args?: SelectSubset<T, ChargeCategoryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ChargeCategoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a ChargeCategory.
+     * @param {ChargeCategoryCreateArgs} args - Arguments to create a ChargeCategory.
+     * @example
+     * // Create one ChargeCategory
+     * const ChargeCategory = await prisma.chargeCategory.create({
+     *   data: {
+     *     // ... data to create a ChargeCategory
+     *   }
+     * })
+     * 
+     */
+    create<T extends ChargeCategoryCreateArgs>(args: SelectSubset<T, ChargeCategoryCreateArgs<ExtArgs>>): Prisma__ChargeCategoryClient<$Result.GetResult<Prisma.$ChargeCategoryPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many ChargeCategories.
+     * @param {ChargeCategoryCreateManyArgs} args - Arguments to create many ChargeCategories.
+     * @example
+     * // Create many ChargeCategories
+     * const chargeCategory = await prisma.chargeCategory.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ChargeCategoryCreateManyArgs>(args?: SelectSubset<T, ChargeCategoryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many ChargeCategories and returns the data saved in the database.
+     * @param {ChargeCategoryCreateManyAndReturnArgs} args - Arguments to create many ChargeCategories.
+     * @example
+     * // Create many ChargeCategories
+     * const chargeCategory = await prisma.chargeCategory.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many ChargeCategories and only return the `id`
+     * const chargeCategoryWithIdOnly = await prisma.chargeCategory.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends ChargeCategoryCreateManyAndReturnArgs>(args?: SelectSubset<T, ChargeCategoryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ChargeCategoryPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a ChargeCategory.
+     * @param {ChargeCategoryDeleteArgs} args - Arguments to delete one ChargeCategory.
+     * @example
+     * // Delete one ChargeCategory
+     * const ChargeCategory = await prisma.chargeCategory.delete({
+     *   where: {
+     *     // ... filter to delete one ChargeCategory
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ChargeCategoryDeleteArgs>(args: SelectSubset<T, ChargeCategoryDeleteArgs<ExtArgs>>): Prisma__ChargeCategoryClient<$Result.GetResult<Prisma.$ChargeCategoryPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one ChargeCategory.
+     * @param {ChargeCategoryUpdateArgs} args - Arguments to update one ChargeCategory.
+     * @example
+     * // Update one ChargeCategory
+     * const chargeCategory = await prisma.chargeCategory.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ChargeCategoryUpdateArgs>(args: SelectSubset<T, ChargeCategoryUpdateArgs<ExtArgs>>): Prisma__ChargeCategoryClient<$Result.GetResult<Prisma.$ChargeCategoryPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more ChargeCategories.
+     * @param {ChargeCategoryDeleteManyArgs} args - Arguments to filter ChargeCategories to delete.
+     * @example
+     * // Delete a few ChargeCategories
+     * const { count } = await prisma.chargeCategory.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ChargeCategoryDeleteManyArgs>(args?: SelectSubset<T, ChargeCategoryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ChargeCategories.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ChargeCategoryUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many ChargeCategories
+     * const chargeCategory = await prisma.chargeCategory.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ChargeCategoryUpdateManyArgs>(args: SelectSubset<T, ChargeCategoryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ChargeCategories and returns the data updated in the database.
+     * @param {ChargeCategoryUpdateManyAndReturnArgs} args - Arguments to update many ChargeCategories.
+     * @example
+     * // Update many ChargeCategories
+     * const chargeCategory = await prisma.chargeCategory.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more ChargeCategories and only return the `id`
+     * const chargeCategoryWithIdOnly = await prisma.chargeCategory.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends ChargeCategoryUpdateManyAndReturnArgs>(args: SelectSubset<T, ChargeCategoryUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ChargeCategoryPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one ChargeCategory.
+     * @param {ChargeCategoryUpsertArgs} args - Arguments to update or create a ChargeCategory.
+     * @example
+     * // Update or create a ChargeCategory
+     * const chargeCategory = await prisma.chargeCategory.upsert({
+     *   create: {
+     *     // ... data to create a ChargeCategory
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the ChargeCategory we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ChargeCategoryUpsertArgs>(args: SelectSubset<T, ChargeCategoryUpsertArgs<ExtArgs>>): Prisma__ChargeCategoryClient<$Result.GetResult<Prisma.$ChargeCategoryPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of ChargeCategories.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ChargeCategoryCountArgs} args - Arguments to filter ChargeCategories to count.
+     * @example
+     * // Count the number of ChargeCategories
+     * const count = await prisma.chargeCategory.count({
+     *   where: {
+     *     // ... the filter for the ChargeCategories we want to count
+     *   }
+     * })
+    **/
+    count<T extends ChargeCategoryCountArgs>(
+      args?: Subset<T, ChargeCategoryCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ChargeCategoryCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a ChargeCategory.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ChargeCategoryAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ChargeCategoryAggregateArgs>(args: Subset<T, ChargeCategoryAggregateArgs>): Prisma.PrismaPromise<GetChargeCategoryAggregateType<T>>
+
+    /**
+     * Group by ChargeCategory.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ChargeCategoryGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ChargeCategoryGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ChargeCategoryGroupByArgs['orderBy'] }
+        : { orderBy?: ChargeCategoryGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ChargeCategoryGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetChargeCategoryGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the ChargeCategory model
+   */
+  readonly fields: ChargeCategoryFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for ChargeCategory.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ChargeCategoryClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the ChargeCategory model
+   */
+  interface ChargeCategoryFieldRefs {
+    readonly id: FieldRef<"ChargeCategory", 'BigInt'>
+    readonly type: FieldRef<"ChargeCategory", 'String'>
+    readonly name: FieldRef<"ChargeCategory", 'String'>
+    readonly zona: FieldRef<"ChargeCategory", 'String'>
+    readonly amount: FieldRef<"ChargeCategory", 'Float'>
+    readonly currency: FieldRef<"ChargeCategory", 'String'>
+    readonly createdAt: FieldRef<"ChargeCategory", 'DateTime'>
+    readonly updatedAt: FieldRef<"ChargeCategory", 'DateTime'>
+    readonly extra: FieldRef<"ChargeCategory", 'Json'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * ChargeCategory findUnique
+   */
+  export type ChargeCategoryFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ChargeCategory
+     */
+    select?: ChargeCategorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ChargeCategory
+     */
+    omit?: ChargeCategoryOmit<ExtArgs> | null
+    /**
+     * Filter, which ChargeCategory to fetch.
+     */
+    where: ChargeCategoryWhereUniqueInput
+  }
+
+  /**
+   * ChargeCategory findUniqueOrThrow
+   */
+  export type ChargeCategoryFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ChargeCategory
+     */
+    select?: ChargeCategorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ChargeCategory
+     */
+    omit?: ChargeCategoryOmit<ExtArgs> | null
+    /**
+     * Filter, which ChargeCategory to fetch.
+     */
+    where: ChargeCategoryWhereUniqueInput
+  }
+
+  /**
+   * ChargeCategory findFirst
+   */
+  export type ChargeCategoryFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ChargeCategory
+     */
+    select?: ChargeCategorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ChargeCategory
+     */
+    omit?: ChargeCategoryOmit<ExtArgs> | null
+    /**
+     * Filter, which ChargeCategory to fetch.
+     */
+    where?: ChargeCategoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ChargeCategories to fetch.
+     */
+    orderBy?: ChargeCategoryOrderByWithRelationInput | ChargeCategoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ChargeCategories.
+     */
+    cursor?: ChargeCategoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ChargeCategories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ChargeCategories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ChargeCategories.
+     */
+    distinct?: ChargeCategoryScalarFieldEnum | ChargeCategoryScalarFieldEnum[]
+  }
+
+  /**
+   * ChargeCategory findFirstOrThrow
+   */
+  export type ChargeCategoryFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ChargeCategory
+     */
+    select?: ChargeCategorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ChargeCategory
+     */
+    omit?: ChargeCategoryOmit<ExtArgs> | null
+    /**
+     * Filter, which ChargeCategory to fetch.
+     */
+    where?: ChargeCategoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ChargeCategories to fetch.
+     */
+    orderBy?: ChargeCategoryOrderByWithRelationInput | ChargeCategoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ChargeCategories.
+     */
+    cursor?: ChargeCategoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ChargeCategories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ChargeCategories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ChargeCategories.
+     */
+    distinct?: ChargeCategoryScalarFieldEnum | ChargeCategoryScalarFieldEnum[]
+  }
+
+  /**
+   * ChargeCategory findMany
+   */
+  export type ChargeCategoryFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ChargeCategory
+     */
+    select?: ChargeCategorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ChargeCategory
+     */
+    omit?: ChargeCategoryOmit<ExtArgs> | null
+    /**
+     * Filter, which ChargeCategories to fetch.
+     */
+    where?: ChargeCategoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ChargeCategories to fetch.
+     */
+    orderBy?: ChargeCategoryOrderByWithRelationInput | ChargeCategoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing ChargeCategories.
+     */
+    cursor?: ChargeCategoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ChargeCategories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ChargeCategories.
+     */
+    skip?: number
+    distinct?: ChargeCategoryScalarFieldEnum | ChargeCategoryScalarFieldEnum[]
+  }
+
+  /**
+   * ChargeCategory create
+   */
+  export type ChargeCategoryCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ChargeCategory
+     */
+    select?: ChargeCategorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ChargeCategory
+     */
+    omit?: ChargeCategoryOmit<ExtArgs> | null
+    /**
+     * The data needed to create a ChargeCategory.
+     */
+    data: XOR<ChargeCategoryCreateInput, ChargeCategoryUncheckedCreateInput>
+  }
+
+  /**
+   * ChargeCategory createMany
+   */
+  export type ChargeCategoryCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many ChargeCategories.
+     */
+    data: ChargeCategoryCreateManyInput | ChargeCategoryCreateManyInput[]
+  }
+
+  /**
+   * ChargeCategory createManyAndReturn
+   */
+  export type ChargeCategoryCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ChargeCategory
+     */
+    select?: ChargeCategorySelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ChargeCategory
+     */
+    omit?: ChargeCategoryOmit<ExtArgs> | null
+    /**
+     * The data used to create many ChargeCategories.
+     */
+    data: ChargeCategoryCreateManyInput | ChargeCategoryCreateManyInput[]
+  }
+
+  /**
+   * ChargeCategory update
+   */
+  export type ChargeCategoryUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ChargeCategory
+     */
+    select?: ChargeCategorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ChargeCategory
+     */
+    omit?: ChargeCategoryOmit<ExtArgs> | null
+    /**
+     * The data needed to update a ChargeCategory.
+     */
+    data: XOR<ChargeCategoryUpdateInput, ChargeCategoryUncheckedUpdateInput>
+    /**
+     * Choose, which ChargeCategory to update.
+     */
+    where: ChargeCategoryWhereUniqueInput
+  }
+
+  /**
+   * ChargeCategory updateMany
+   */
+  export type ChargeCategoryUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update ChargeCategories.
+     */
+    data: XOR<ChargeCategoryUpdateManyMutationInput, ChargeCategoryUncheckedUpdateManyInput>
+    /**
+     * Filter which ChargeCategories to update
+     */
+    where?: ChargeCategoryWhereInput
+    /**
+     * Limit how many ChargeCategories to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * ChargeCategory updateManyAndReturn
+   */
+  export type ChargeCategoryUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ChargeCategory
+     */
+    select?: ChargeCategorySelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ChargeCategory
+     */
+    omit?: ChargeCategoryOmit<ExtArgs> | null
+    /**
+     * The data used to update ChargeCategories.
+     */
+    data: XOR<ChargeCategoryUpdateManyMutationInput, ChargeCategoryUncheckedUpdateManyInput>
+    /**
+     * Filter which ChargeCategories to update
+     */
+    where?: ChargeCategoryWhereInput
+    /**
+     * Limit how many ChargeCategories to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * ChargeCategory upsert
+   */
+  export type ChargeCategoryUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ChargeCategory
+     */
+    select?: ChargeCategorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ChargeCategory
+     */
+    omit?: ChargeCategoryOmit<ExtArgs> | null
+    /**
+     * The filter to search for the ChargeCategory to update in case it exists.
+     */
+    where: ChargeCategoryWhereUniqueInput
+    /**
+     * In case the ChargeCategory found by the `where` argument doesn't exist, create a new ChargeCategory with this data.
+     */
+    create: XOR<ChargeCategoryCreateInput, ChargeCategoryUncheckedCreateInput>
+    /**
+     * In case the ChargeCategory was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ChargeCategoryUpdateInput, ChargeCategoryUncheckedUpdateInput>
+  }
+
+  /**
+   * ChargeCategory delete
+   */
+  export type ChargeCategoryDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ChargeCategory
+     */
+    select?: ChargeCategorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ChargeCategory
+     */
+    omit?: ChargeCategoryOmit<ExtArgs> | null
+    /**
+     * Filter which ChargeCategory to delete.
+     */
+    where: ChargeCategoryWhereUniqueInput
+  }
+
+  /**
+   * ChargeCategory deleteMany
+   */
+  export type ChargeCategoryDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ChargeCategories to delete
+     */
+    where?: ChargeCategoryWhereInput
+    /**
+     * Limit how many ChargeCategories to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * ChargeCategory without action
+   */
+  export type ChargeCategoryDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ChargeCategory
+     */
+    select?: ChargeCategorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ChargeCategory
+     */
+    omit?: ChargeCategoryOmit<ExtArgs> | null
+  }
+
+
+  /**
    * Model AppSetting
    */
 
@@ -13597,6 +14767,21 @@ export namespace Prisma {
   export type InventoryItemScalarFieldEnum = (typeof InventoryItemScalarFieldEnum)[keyof typeof InventoryItemScalarFieldEnum]
 
 
+  export const ChargeCategoryScalarFieldEnum: {
+    id: 'id',
+    type: 'type',
+    name: 'name',
+    zona: 'zona',
+    amount: 'amount',
+    currency: 'currency',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    extra: 'extra'
+  };
+
+  export type ChargeCategoryScalarFieldEnum = (typeof ChargeCategoryScalarFieldEnum)[keyof typeof ChargeCategoryScalarFieldEnum]
+
+
   export const AppSettingScalarFieldEnum: {
     key: 'key',
     value: 'value',
@@ -14683,6 +15868,80 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"InventoryItem"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"InventoryItem"> | Date | string
     extra?: JsonNullableWithAggregatesFilter<"InventoryItem">
+  }
+
+  export type ChargeCategoryWhereInput = {
+    AND?: ChargeCategoryWhereInput | ChargeCategoryWhereInput[]
+    OR?: ChargeCategoryWhereInput[]
+    NOT?: ChargeCategoryWhereInput | ChargeCategoryWhereInput[]
+    id?: BigIntFilter<"ChargeCategory"> | bigint | number
+    type?: StringFilter<"ChargeCategory"> | string
+    name?: StringFilter<"ChargeCategory"> | string
+    zona?: StringFilter<"ChargeCategory"> | string
+    amount?: FloatFilter<"ChargeCategory"> | number
+    currency?: StringFilter<"ChargeCategory"> | string
+    createdAt?: DateTimeFilter<"ChargeCategory"> | Date | string
+    updatedAt?: DateTimeFilter<"ChargeCategory"> | Date | string
+    extra?: JsonNullableFilter<"ChargeCategory">
+  }
+
+  export type ChargeCategoryOrderByWithRelationInput = {
+    id?: SortOrder
+    type?: SortOrder
+    name?: SortOrder
+    zona?: SortOrder
+    amount?: SortOrder
+    currency?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    extra?: SortOrderInput | SortOrder
+  }
+
+  export type ChargeCategoryWhereUniqueInput = Prisma.AtLeast<{
+    id?: bigint | number
+    AND?: ChargeCategoryWhereInput | ChargeCategoryWhereInput[]
+    OR?: ChargeCategoryWhereInput[]
+    NOT?: ChargeCategoryWhereInput | ChargeCategoryWhereInput[]
+    type?: StringFilter<"ChargeCategory"> | string
+    name?: StringFilter<"ChargeCategory"> | string
+    zona?: StringFilter<"ChargeCategory"> | string
+    amount?: FloatFilter<"ChargeCategory"> | number
+    currency?: StringFilter<"ChargeCategory"> | string
+    createdAt?: DateTimeFilter<"ChargeCategory"> | Date | string
+    updatedAt?: DateTimeFilter<"ChargeCategory"> | Date | string
+    extra?: JsonNullableFilter<"ChargeCategory">
+  }, "id">
+
+  export type ChargeCategoryOrderByWithAggregationInput = {
+    id?: SortOrder
+    type?: SortOrder
+    name?: SortOrder
+    zona?: SortOrder
+    amount?: SortOrder
+    currency?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    extra?: SortOrderInput | SortOrder
+    _count?: ChargeCategoryCountOrderByAggregateInput
+    _avg?: ChargeCategoryAvgOrderByAggregateInput
+    _max?: ChargeCategoryMaxOrderByAggregateInput
+    _min?: ChargeCategoryMinOrderByAggregateInput
+    _sum?: ChargeCategorySumOrderByAggregateInput
+  }
+
+  export type ChargeCategoryScalarWhereWithAggregatesInput = {
+    AND?: ChargeCategoryScalarWhereWithAggregatesInput | ChargeCategoryScalarWhereWithAggregatesInput[]
+    OR?: ChargeCategoryScalarWhereWithAggregatesInput[]
+    NOT?: ChargeCategoryScalarWhereWithAggregatesInput | ChargeCategoryScalarWhereWithAggregatesInput[]
+    id?: BigIntWithAggregatesFilter<"ChargeCategory"> | bigint | number
+    type?: StringWithAggregatesFilter<"ChargeCategory"> | string
+    name?: StringWithAggregatesFilter<"ChargeCategory"> | string
+    zona?: StringWithAggregatesFilter<"ChargeCategory"> | string
+    amount?: FloatWithAggregatesFilter<"ChargeCategory"> | number
+    currency?: StringWithAggregatesFilter<"ChargeCategory"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"ChargeCategory"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"ChargeCategory"> | Date | string
+    extra?: JsonNullableWithAggregatesFilter<"ChargeCategory">
   }
 
   export type AppSettingWhereInput = {
@@ -16024,6 +17283,90 @@ export namespace Prisma {
     extra?: NullableJsonNullValueInput | InputJsonValue
   }
 
+  export type ChargeCategoryCreateInput = {
+    id: bigint | number
+    type: string
+    name: string
+    zona?: string
+    amount: number
+    currency: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    extra?: NullableJsonNullValueInput | InputJsonValue
+  }
+
+  export type ChargeCategoryUncheckedCreateInput = {
+    id: bigint | number
+    type: string
+    name: string
+    zona?: string
+    amount: number
+    currency: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    extra?: NullableJsonNullValueInput | InputJsonValue
+  }
+
+  export type ChargeCategoryUpdateInput = {
+    id?: BigIntFieldUpdateOperationsInput | bigint | number
+    type?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    zona?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    extra?: NullableJsonNullValueInput | InputJsonValue
+  }
+
+  export type ChargeCategoryUncheckedUpdateInput = {
+    id?: BigIntFieldUpdateOperationsInput | bigint | number
+    type?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    zona?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    extra?: NullableJsonNullValueInput | InputJsonValue
+  }
+
+  export type ChargeCategoryCreateManyInput = {
+    id: bigint | number
+    type: string
+    name: string
+    zona?: string
+    amount: number
+    currency: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    extra?: NullableJsonNullValueInput | InputJsonValue
+  }
+
+  export type ChargeCategoryUpdateManyMutationInput = {
+    id?: BigIntFieldUpdateOperationsInput | bigint | number
+    type?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    zona?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    extra?: NullableJsonNullValueInput | InputJsonValue
+  }
+
+  export type ChargeCategoryUncheckedUpdateManyInput = {
+    id?: BigIntFieldUpdateOperationsInput | bigint | number
+    type?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    zona?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    extra?: NullableJsonNullValueInput | InputJsonValue
+  }
+
   export type AppSettingCreateInput = {
     key: string
     value: JsonNullValueInput | InputJsonValue
@@ -17059,6 +18402,50 @@ export namespace Prisma {
     minStock?: SortOrder
     maxStock?: SortOrder
     cost?: SortOrder
+  }
+
+  export type ChargeCategoryCountOrderByAggregateInput = {
+    id?: SortOrder
+    type?: SortOrder
+    name?: SortOrder
+    zona?: SortOrder
+    amount?: SortOrder
+    currency?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    extra?: SortOrder
+  }
+
+  export type ChargeCategoryAvgOrderByAggregateInput = {
+    id?: SortOrder
+    amount?: SortOrder
+  }
+
+  export type ChargeCategoryMaxOrderByAggregateInput = {
+    id?: SortOrder
+    type?: SortOrder
+    name?: SortOrder
+    zona?: SortOrder
+    amount?: SortOrder
+    currency?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ChargeCategoryMinOrderByAggregateInput = {
+    id?: SortOrder
+    type?: SortOrder
+    name?: SortOrder
+    zona?: SortOrder
+    amount?: SortOrder
+    currency?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ChargeCategorySumOrderByAggregateInput = {
+    id?: SortOrder
+    amount?: SortOrder
   }
 
   export type AppSettingCountOrderByAggregateInput = {

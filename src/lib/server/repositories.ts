@@ -124,6 +124,14 @@ export const inventory = numericIdCollection(prisma.inventoryItem as unknown as 
   date: ['createdAt'],
 })
 
+// ---------- Categorías de cargos (Limpieza / Servicio) ----------
+
+export const chargeCategories = numericIdCollection(prisma.chargeCategory as unknown as Delegate, {
+  str: ['type', 'name', 'zona', 'currency'],
+  float: ['amount'],
+  date: ['createdAt'],
+})
+
 // ---------- Planes de tarifa ----------
 
 const ratePlanSpec: FieldSpec = {
@@ -244,7 +252,8 @@ export const users: Collection = {
 
 // ---------- Configuración ----------
 
-export const SETTING_KEYS = ['userSettings', 'channelConfig', 'general'] as const
+// petCharges: precio por mascota y por estadía, { USD: string, ARS: string } (Categorías → Mascotas).
+export const SETTING_KEYS = ['userSettings', 'channelConfig', 'general', 'petCharges'] as const
 export type SettingKey = (typeof SETTING_KEYS)[number]
 
 export async function getSetting(key: string): Promise<unknown | null> {
@@ -263,6 +272,7 @@ export const COLLECTIONS = {
   expenses,
   inventory,
   'rate-plans': ratePlans,
+  'charge-categories': chargeCategories,
   rates,
   users,
 } satisfies Record<string, Collection>

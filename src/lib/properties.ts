@@ -91,8 +91,12 @@ export interface Property {
   // Cargos
   chargesCurrency: string
   charges: {
+    // limpieza / servicio / mascotas: importe al momento de guardar (referencia). El precio
+    // vigente sale de la categoría elegida: ver resolvePropertyCharges (chargeCategories.ts).
     limpieza: string
     servicio: string
+    limpiezaCategoryId?: string
+    servicioCategoryId?: string
     mascotas: string
     cochera: string
     deposito: string

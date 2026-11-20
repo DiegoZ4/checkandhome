@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState, useEffect } from 'react'
-import { Home, ArrowLeft, Save, Image as ImageIcon, X } from 'lucide-react'
+import { Home, ArrowLeft, Save, Image as ImageIcon, X, Lock } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
@@ -18,6 +18,17 @@ import {
   BedConfig,
 } from '@/lib/properties'
 import { uploadPhotos } from '@/lib/photoUpload'
+import TimeSelect from '@/components/TimeSelect'
+import {
+  loadChargeCategories,
+  loadPetCharges,
+  categoryLabel,
+  formatMoney,
+  ChargeCategory,
+  ChargeCategoryType,
+  ChargeCurrency,
+  PetCharges,
+} from '@/lib/chargeCategories'
 
 function AlojamientoForm() {
   const router = useRouter()
@@ -52,6 +63,8 @@ function AlojamientoForm() {
     charges: {
       limpieza: '',
       servicio: '',
+      limpiezaCategoryId: '',
+      servicioCategoryId: '',
       mascotas: '',
       cochera: '',
       deposito: '',
@@ -87,6 +100,12 @@ function AlojamientoForm() {
 
   const [photos, setPhotos] = useState<string[]>([])
 
+  // Categorías de cargos. Lectura directa de localStorage: CloudSyncGate no renderiza las
+  // páginas en el servidor (muestra "Cargando datos..." hasta descargar), así que no hay
+  // diferencia de hidratación.
+  const [chargeCategories] = useState<ChargeCategory[]>(() => loadChargeCategories())
+  const [petCharges] = useState<PetCharges>(() => loadPetCharges())
+
   // Modo edición: si hay ?id=, precargamos los datos de la propiedad existente.
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingCreatedAt, setEditingCreatedAt] = useState('')
@@ -118,7 +137,7 @@ function AlojamientoForm() {
       mtsDelMar: found.mtsDelMar,
       mascotasCantidad: found.mascotasCantidad,
       chargesCurrency: found.chargesCurrency,
-      charges: found.charges,
+      charges: { limpiezaCategoryId: '', servicioCategoryId: '', ...found.charges },
       wifiNetwork: found.wifiNetwork,
       wifiPassword: found.wifiPassword,
       keysCount: found.keysCount,
@@ -138,6 +157,44 @@ function AlojamientoForm() {
     const { name, value } = e.target
     setData(prev => ({ ...prev, [name]: value }))
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }))
+  }
+
+  // Al elegir el "De", el "Hasta" toma ese valor si estaba vacío o quedaba antes (nunca puede ser menor).
+  const setFromTime = (
+    fromKey: 'checkInFrom' | 'checkOutFrom',
+    toKey: 'checkInTo' | 'checkOutTo',
+    value: string,
+  ) => {
+    setData(prev => {
+      const to = prev[toKey]
+      return { ...prev, [fromKey]: value, [toKey]: value && (!to || to < value) ? value : to }
+    })
+  }
+
+  // Limpieza / Servicio: se elige una categoría ya cargada (de la moneda de los cargos).
+  const categoriesOf = (type: ChargeCategoryType) =>
+    chargeCategories.filter(c => c.type === type && c.currency === data.chargesCurrency)
+  const selectedCategory = (type: ChargeCategoryType) =>
+    categoriesOf(type).find(c => String(c.id) === data.charges[`${type}CategoryId`])
+  // Mascotas: precio por mascota y por estadía de Categorías → Mascotas (no se edita acá).
+  const petPrice = petCharges[data.chargesCurrency as ChargeCurrency] || ''
+
+  const selectCategory = (type: ChargeCategoryType, id: string) => {
+    const c = chargeCategories.find(x => String(x.id) === id)
+    setData(prev => ({
+      ...prev,
+      charges: { ...prev.charges, [`${type}CategoryId`]: id, [type]: c ? String(c.amount) : '' },
+    }))
+    if (errors[`charge_${type}`]) setErrors(prev => ({ ...prev, [`charge_${type}`]: '' }))
+  }
+
+  // Al cambiar la moneda, las categorías elegidas (de la otra moneda) dejan de valer.
+  const changeCurrency = (currency: string) => {
+    setData(prev => ({
+      ...prev,
+      chargesCurrency: currency,
+      charges: { ...prev.charges, limpiezaCategoryId: '', servicioCategoryId: '', limpieza: '', servicio: '' },
+    }))
   }
 
   const handleChargeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,12 +251,14 @@ function AlojamientoForm() {
     if (!data.number.trim()) newErrors.number = 'El N° es obligatorio'
 
     // Cargos siempre obligatorios: Limpieza, Servicio, Depósito.
-    if (!data.charges.limpieza) newErrors.charge_limpieza = 'Obligatorio'
-    if (!data.charges.servicio) newErrors.charge_servicio = 'Obligatorio'
+    if (!selectedCategory('limpieza')) newErrors.charge_limpieza = 'Seleccioná una categoría de limpieza'
+    if (!selectedCategory('servicio')) newErrors.charge_servicio = 'Seleccioná una categoría de servicio'
     if (!data.charges.deposito) newErrors.charge_deposito = 'Obligatorio'
 
     // Cargos condicionales: obligatorios solo si la comodidad está seleccionada.
-    if (amenities.mascotas && !data.charges.mascotas) newErrors.charge_mascotas = 'Obligatorio (Mascotas seleccionado)'
+    if (amenities.mascotas && !petPrice) {
+      newErrors.charge_mascotas = `No hay precio de mascotas en ${data.chargesCurrency}. Cargalo en Categorías → Mascotas.`
+    }
     if (amenities.cochera && !data.charges.cochera) newErrors.charge_cochera = 'Obligatorio (Cochera seleccionada)'
     if (amenities.jovenes && !data.charges.depositoJoven) newErrors.charge_depositoJoven = 'Obligatorio (Jóvenes seleccionado)'
 
@@ -245,7 +304,13 @@ function AlojamientoForm() {
         mtsDelMar: data.mtsDelMar,
         mascotasCantidad: data.mascotasCantidad,
         chargesCurrency: data.chargesCurrency,
-        charges: data.charges,
+        // Importes de referencia con los precios actuales; el vigente sale siempre de la categoría.
+        charges: {
+          ...data.charges,
+          limpieza: String(selectedCategory('limpieza')?.amount ?? ''),
+          servicio: String(selectedCategory('servicio')?.amount ?? ''),
+          mascotas: petPrice,
+        },
         wifiNetwork: data.wifiNetwork.trim(),
         wifiPassword: data.wifiPassword,
         keysCount: data.keysCount,
@@ -417,11 +482,11 @@ function AlojamientoForm() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label htmlFor="checkInFrom" className="block text-xs text-gray-500">De</label>
-                      <input type="time" id="checkInFrom" name="checkInFrom" value={data.checkInFrom} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                      <TimeSelect id="checkInFrom" className="mt-1" value={data.checkInFrom} onChange={v => setFromTime('checkInFrom', 'checkInTo', v)} />
                     </div>
                     <div>
                       <label htmlFor="checkInTo" className="block text-xs text-gray-500">Hasta</label>
-                      <input type="time" id="checkInTo" name="checkInTo" value={data.checkInTo} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                      <TimeSelect id="checkInTo" className="mt-1" value={data.checkInTo} min={data.checkInFrom} onChange={v => setData(prev => ({ ...prev, checkInTo: v }))} />
                     </div>
                   </div>
                 </div>
@@ -430,11 +495,11 @@ function AlojamientoForm() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label htmlFor="checkOutFrom" className="block text-xs text-gray-500">De</label>
-                      <input type="time" id="checkOutFrom" name="checkOutFrom" value={data.checkOutFrom} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                      <TimeSelect id="checkOutFrom" className="mt-1" value={data.checkOutFrom} onChange={v => setFromTime('checkOutFrom', 'checkOutTo', v)} />
                     </div>
                     <div>
                       <label htmlFor="checkOutTo" className="block text-xs text-gray-500">Hasta</label>
-                      <input type="time" id="checkOutTo" name="checkOutTo" value={data.checkOutTo} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                      <TimeSelect id="checkOutTo" className="mt-1" value={data.checkOutTo} min={data.checkOutFrom} onChange={v => setData(prev => ({ ...prev, checkOutTo: v }))} />
                     </div>
                   </div>
                 </div>
@@ -503,7 +568,7 @@ function AlojamientoForm() {
               <div className="mt-6 flex flex-wrap gap-6">
                 {amenities.mascotas && (
                   <div className="max-w-xs">
-                    <label htmlFor="mascotasCantidad" className="block text-sm font-medium text-gray-700">Cantidad de mascotas</label>
+                    <label htmlFor="mascotasCantidad" className="block text-sm font-medium text-gray-700">Cantidad máxima de mascotas</label>
                     <input type="number" min="0" id="mascotasCantidad" name="mascotasCantidad" value={data.mascotasCantidad} onChange={handleChange} className={`mt-1 ${inputClass()}`} placeholder="0" />
                   </div>
                 )}
@@ -522,17 +587,78 @@ function AlojamientoForm() {
                 <h3 className="text-lg font-medium text-gray-900">Cargos</h3>
                 <div className="w-40">
                   <label htmlFor="chargesCurrency" className="sr-only">Tipo de moneda</label>
-                  <select id="chargesCurrency" name="chargesCurrency" value={data.chargesCurrency} onChange={handleChange} className={inputClass()}>
+                  <select id="chargesCurrency" name="chargesCurrency" value={data.chargesCurrency} onChange={e => changeCurrency(e.target.value)} className={inputClass()}>
                     {CURRENCIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
               </div>
               <p className="text-xs text-gray-500 mb-6">Limpieza, Servicio y Depósito son obligatorios. Mascotas, Cochera y Depósito joven solo si la comodidad está seleccionada.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Limpieza / Servicio: categorías ya cargadas (de la moneda elegida) */}
+                {(['limpieza', 'servicio'] as const).map(type => {
+                  const options = categoriesOf(type)
+                  const legacy = !data.charges[`${type}CategoryId`] && data.charges[type]
+                  return (
+                    <div key={type}>
+                      <label htmlFor={type} className="block text-sm font-medium text-gray-700">
+                        {type === 'limpieza' ? 'Limpieza' : 'Servicio'} *
+                      </label>
+                      <select
+                        id={type}
+                        value={selectedCategory(type) ? data.charges[`${type}CategoryId`] : ''}
+                        onChange={e => selectCategory(type, e.target.value)}
+                        className={`mt-1 ${inputClass(`charge_${type}`)}`}
+                      >
+                        <option value="">Seleccionar categoría</option>
+                        {options.map(c => <option key={c.id} value={String(c.id)}>{categoryLabel(c)}</option>)}
+                      </select>
+                      {errors[`charge_${type}`] ? (
+                        <p className="mt-2 text-sm text-red-600">{errors[`charge_${type}`]}</p>
+                      ) : options.length === 0 ? (
+                        <p className="mt-1 text-xs text-amber-600">
+                          No hay categorías de {type} en {data.chargesCurrency}.{' '}
+                          <Link href={`/categories?tab=${type}`} className="underline">Cargarlas en Categorías</Link>
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs text-gray-500">Seleccioná una de las categorías ya cargadas.</p>
+                      )}
+                      {legacy && (
+                        <p className="mt-1 text-xs text-amber-600">
+                          Importe cargado antes: {formatMoney(data.chargesCurrency, data.charges[type])}. Elegí la categoría que corresponda.
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* Mascotas: precio fijo de Categorías → Mascotas, no editable */}
+                <div>
+                  <label htmlFor="mascotas" className="block text-sm font-medium text-gray-700">
+                    Mascotas{amenities.mascotas ? ' *' : ''}
+                  </label>
+                  <div className="relative mt-1">
+                    <input
+                      type="text"
+                      id="mascotas"
+                      value={petPrice}
+                      readOnly
+                      disabled
+                      className={`${inputClass('charge_mascotas')} bg-gray-100 text-gray-500 cursor-not-allowed pr-9`}
+                      placeholder="Sin precio cargado"
+                    />
+                    <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" aria-hidden="true" />
+                  </div>
+                  {errors.charge_mascotas ? (
+                    <p className="mt-2 text-sm text-red-600">{errors.charge_mascotas}</p>
+                  ) : (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Precio por mascota y por estadía. Se carga automáticamente
+                      {!petPrice && <> (<Link href="/categories?tab=mascotas" className="underline">cargarlo en Categorías → Mascotas</Link>)</>}.
+                    </p>
+                  )}
+                </div>
+
                 {[
-                  { key: 'limpieza', label: 'Limpieza *', disabled: false },
-                  { key: 'servicio', label: 'Servicio *', disabled: false },
-                  { key: 'mascotas', label: `Mascotas${amenities.mascotas ? ' *' : ''}`, disabled: false },
                   { key: 'cochera', label: `Cochera${amenities.cochera ? ' *' : ''}`, disabled: false },
                   { key: 'deposito', label: 'Depósito *', disabled: false },
                   { key: 'depositoJoven', label: `Depósito joven${amenities.jovenes ? ' *' : ''}`, disabled: !amenities.jovenes },
@@ -727,7 +853,7 @@ function CocheraForm() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [successMessage, setSuccessMessage] = useState('')
 
-  const [data, setData] = useState({ name: '', address: '', apartment: '', description: '' })
+  const [data, setData] = useState({ name: '', address: '', number: '', apartment: '', description: '' })
   const [photos, setPhotos] = useState<string[]>([])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -756,7 +882,8 @@ function CocheraForm() {
     e.preventDefault()
     const newErrors: { [key: string]: string } = {}
     if (!data.name.trim()) newErrors.name = 'El nombre es obligatorio'
-    if (!data.address.trim()) newErrors.address = 'La dirección es obligatoria'
+    if (!data.address.trim()) newErrors.address = 'La calle es obligatoria'
+    if (!data.number.trim()) newErrors.number = 'La altura es obligatoria'
     setErrors(newErrors)
     if (Object.keys(newErrors).length > 0) return
 
@@ -769,7 +896,7 @@ function CocheraForm() {
         name: data.name.trim(),
         zona: '',
         address: data.address.trim(),
-        number: '',
+        number: data.number.trim(),
         floor: '',
         apartment: data.apartment.trim(),
         description: data.description.trim(),
@@ -854,9 +981,14 @@ function CocheraForm() {
                   {errors.name && <p className="mt-2 text-sm text-red-600">{errors.name}</p>}
                 </div>
                 <div>
-                  <label htmlFor="address" className="block text-sm font-medium text-gray-700">Dirección *</label>
-                  <input type="text" id="address" name="address" value={data.address} onChange={handleChange} className={`mt-1 ${inputClass('address')}`} placeholder="Av. Colón 1234" />
+                  <label htmlFor="address" className="block text-sm font-medium text-gray-700">Dirección (calle) *</label>
+                  <input type="text" id="address" name="address" value={data.address} onChange={handleChange} className={`mt-1 ${inputClass('address')}`} placeholder="Av. Colón" />
                   {errors.address && <p className="mt-2 text-sm text-red-600">{errors.address}</p>}
+                </div>
+                <div>
+                  <label htmlFor="number" className="block text-sm font-medium text-gray-700">Altura *</label>
+                  <input type="text" id="number" name="number" value={data.number} onChange={handleChange} className={`mt-1 ${inputClass('number')}`} placeholder="1234" />
+                  {errors.number && <p className="mt-2 text-sm text-red-600">{errors.number}</p>}
                 </div>
                 <div>
                   <label htmlFor="apartment" className="block text-sm font-medium text-gray-700">Número de cochera / Piso</label>

@@ -284,6 +284,18 @@ exports.Prisma.InventoryItemScalarFieldEnum = {
   extra: 'extra'
 };
 
+exports.Prisma.ChargeCategoryScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  name: 'name',
+  zona: 'zona',
+  amount: 'amount',
+  currency: 'currency',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  extra: 'extra'
+};
+
 exports.Prisma.AppSettingScalarFieldEnum = {
   key: 'key',
   value: 'value',
@@ -349,6 +361,7 @@ exports.Prisma.ModelName = {
   RatePlan: 'RatePlan',
   Expense: 'Expense',
   InventoryItem: 'InventoryItem',
+  ChargeCategory: 'ChargeCategory',
   AppSetting: 'AppSetting',
   Photo: 'Photo',
   Video: 'Video'

@@ -13,6 +13,7 @@ import {
   BED_TYPES,
   CURRENCIES,
 } from '@/lib/properties'
+import { loadChargeCategories, resolvePropertyCharges } from '@/lib/chargeCategories'
 
 const nameOf = (list: readonly { id: string; name: string }[], id: string) =>
   list.find(i => i.id === id)?.name || id
@@ -67,10 +68,16 @@ export default function PropertyDetailPage() {
   const Icon = isCochera ? Car : Home
   const enabledBeds = BED_TYPES.filter(b => p.beds?.[b.id]?.enabled)
   const enabledAmenities = AMENITIES.filter(a => p.amenities?.[a.id])
+  // Limpieza / servicio / mascotas con el precio actual de su categoría.
+  const current = resolvePropertyCharges(p)
+  const categoryName = (id?: string) => {
+    const c = id ? loadChargeCategories().find(x => String(x.id) === id) : undefined
+    return c ? ` (${[c.name, c.type === 'servicio' ? c.zona : ''].filter(Boolean).join(' — ')})` : ''
+  }
   const charges = [
-    { label: 'Limpieza', value: p.charges?.limpieza },
-    { label: 'Servicio', value: p.charges?.servicio },
-    { label: 'Mascotas', value: p.charges?.mascotas },
+    { label: `Limpieza${categoryName(p.charges?.limpiezaCategoryId)}`, value: current.limpieza ? String(current.limpieza) : '' },
+    { label: `Servicio${categoryName(p.charges?.servicioCategoryId)}`, value: current.servicio ? String(current.servicio) : '' },
+    { label: 'Mascotas (por mascota y por estadía)', value: p.amenities?.mascotas && current.mascotas ? String(current.mascotas) : '' },
     { label: 'Cochera', value: p.charges?.cochera },
     { label: 'Depósito', value: p.charges?.deposito },
     { label: 'Depósito joven', value: p.charges?.depositoJoven },
@@ -176,7 +183,7 @@ export default function PropertyDetailPage() {
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
-                  {p.amenities?.mascotas && <Field label="Cantidad de mascotas" value={p.mascotasCantidad} />}
+                  {p.amenities?.mascotas && <Field label="Cantidad máxima de mascotas" value={p.mascotasCantidad} />}
                   <Field label="Mts del mar" value={p.mtsDelMar} />
                 </div>
               </Section>

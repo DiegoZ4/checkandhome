@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import {
-  Menu, X, LogOut, Home, Users, Calendar, CalendarRange, Building2, BarChart3, ChevronRight,
+  Menu, X, LogOut, Home, Users, Calendar, CalendarRange, Building2, BarChart3, ChevronRight, Tags,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -54,6 +54,16 @@ const MENU_ITEMS: {
     children: [
       { label: 'Alojamientos', href: '/units/list?category=alojamiento' },
       { label: 'Cocheras', href: '/units/list?category=cochera' },
+    ],
+  },
+  {
+    label: 'Categorías',
+    href: '/categories',
+    icon: Tags,
+    children: [
+      { label: 'Limpieza', href: '/categories?tab=limpieza' },
+      { label: 'Servicio', href: '/categories?tab=servicio' },
+      { label: 'Mascotas', href: '/categories?tab=mascotas' },
     ],
   },
   // { label: 'Cocheras', href: '/units/list?category=cochera', icon: Car },

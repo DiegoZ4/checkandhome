@@ -121,6 +121,29 @@ export function roundNice(value: number, base = 1000): number {
   return Math.round(value / base) * base
 }
 
+/**
+ * Reservas que se superponen con las fechas dadas (las canceladas no cuentan).
+ * Las fechas son YYYY-MM-DD; el día de check-out queda libre, así que una reserva puede
+ * entrar el mismo día en que sale la anterior.
+ * - field 'propertyId': choca en el mismo alojamiento.
+ * - field 'cocheraId': choca en la misma cochera (sólo reservas con cochera activada).
+ */
+export function findOverlaps(
+  reservations: Reservation[],
+  opts: { field: 'propertyId' | 'cocheraId'; id: string; checkIn: string; checkOut: string; excludeId?: number | null },
+): Reservation[] {
+  const { field, id, checkIn, checkOut, excludeId } = opts
+  if (!id || !checkIn || !checkOut || checkIn >= checkOut) return []
+  return reservations.filter(r =>
+    r.id !== excludeId &&
+    r.status !== 'CANCELADA' &&
+    String(r[field]) === id &&
+    (field !== 'cocheraId' || r.cocheraEnabled) &&
+    r.checkInDate < checkOut &&
+    checkIn < r.checkOutDate,
+  )
+}
+
 export function loadReservations(): Reservation[] {
   if (typeof window === 'undefined') return []
   try {

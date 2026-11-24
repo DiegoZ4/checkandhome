@@ -10439,6 +10439,7 @@ export namespace Prisma {
     type: string | null
     name: string | null
     zona: string | null
+    description: string | null
     amount: number | null
     currency: string | null
     createdAt: Date | null
@@ -10450,6 +10451,7 @@ export namespace Prisma {
     type: string | null
     name: string | null
     zona: string | null
+    description: string | null
     amount: number | null
     currency: string | null
     createdAt: Date | null
@@ -10461,6 +10463,7 @@ export namespace Prisma {
     type: number
     name: number
     zona: number
+    description: number
     amount: number
     currency: number
     createdAt: number
@@ -10485,6 +10488,7 @@ export namespace Prisma {
     type?: true
     name?: true
     zona?: true
+    description?: true
     amount?: true
     currency?: true
     createdAt?: true
@@ -10496,6 +10500,7 @@ export namespace Prisma {
     type?: true
     name?: true
     zona?: true
+    description?: true
     amount?: true
     currency?: true
     createdAt?: true
@@ -10507,6 +10512,7 @@ export namespace Prisma {
     type?: true
     name?: true
     zona?: true
+    description?: true
     amount?: true
     currency?: true
     createdAt?: true
@@ -10606,6 +10612,7 @@ export namespace Prisma {
     type: string
     name: string
     zona: string
+    description: string
     amount: number
     currency: string
     createdAt: Date
@@ -10637,6 +10644,7 @@ export namespace Prisma {
     type?: boolean
     name?: boolean
     zona?: boolean
+    description?: boolean
     amount?: boolean
     currency?: boolean
     createdAt?: boolean
@@ -10649,6 +10657,7 @@ export namespace Prisma {
     type?: boolean
     name?: boolean
     zona?: boolean
+    description?: boolean
     amount?: boolean
     currency?: boolean
     createdAt?: boolean
@@ -10661,6 +10670,7 @@ export namespace Prisma {
     type?: boolean
     name?: boolean
     zona?: boolean
+    description?: boolean
     amount?: boolean
     currency?: boolean
     createdAt?: boolean
@@ -10673,6 +10683,7 @@ export namespace Prisma {
     type?: boolean
     name?: boolean
     zona?: boolean
+    description?: boolean
     amount?: boolean
     currency?: boolean
     createdAt?: boolean
@@ -10680,7 +10691,7 @@ export namespace Prisma {
     extra?: boolean
   }
 
-  export type ChargeCategoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "type" | "name" | "zona" | "amount" | "currency" | "createdAt" | "updatedAt" | "extra", ExtArgs["result"]["chargeCategory"]>
+  export type ChargeCategoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "type" | "name" | "zona" | "description" | "amount" | "currency" | "createdAt" | "updatedAt" | "extra", ExtArgs["result"]["chargeCategory"]>
 
   export type $ChargeCategoryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "ChargeCategory"
@@ -10690,6 +10701,7 @@ export namespace Prisma {
       type: string
       name: string
       zona: string
+      description: string
       amount: number
       currency: string
       createdAt: Date
@@ -11122,6 +11134,7 @@ export namespace Prisma {
     readonly type: FieldRef<"ChargeCategory", 'String'>
     readonly name: FieldRef<"ChargeCategory", 'String'>
     readonly zona: FieldRef<"ChargeCategory", 'String'>
+    readonly description: FieldRef<"ChargeCategory", 'String'>
     readonly amount: FieldRef<"ChargeCategory", 'Float'>
     readonly currency: FieldRef<"ChargeCategory", 'String'>
     readonly createdAt: FieldRef<"ChargeCategory", 'DateTime'>
@@ -14772,6 +14785,7 @@ export namespace Prisma {
     type: 'type',
     name: 'name',
     zona: 'zona',
+    description: 'description',
     amount: 'amount',
     currency: 'currency',
     createdAt: 'createdAt',
@@ -15878,6 +15892,7 @@ export namespace Prisma {
     type?: StringFilter<"ChargeCategory"> | string
     name?: StringFilter<"ChargeCategory"> | string
     zona?: StringFilter<"ChargeCategory"> | string
+    description?: StringFilter<"ChargeCategory"> | string
     amount?: FloatFilter<"ChargeCategory"> | number
     currency?: StringFilter<"ChargeCategory"> | string
     createdAt?: DateTimeFilter<"ChargeCategory"> | Date | string
@@ -15890,6 +15905,7 @@ export namespace Prisma {
     type?: SortOrder
     name?: SortOrder
     zona?: SortOrder
+    description?: SortOrder
     amount?: SortOrder
     currency?: SortOrder
     createdAt?: SortOrder
@@ -15905,6 +15921,7 @@ export namespace Prisma {
     type?: StringFilter<"ChargeCategory"> | string
     name?: StringFilter<"ChargeCategory"> | string
     zona?: StringFilter<"ChargeCategory"> | string
+    description?: StringFilter<"ChargeCategory"> | string
     amount?: FloatFilter<"ChargeCategory"> | number
     currency?: StringFilter<"ChargeCategory"> | string
     createdAt?: DateTimeFilter<"ChargeCategory"> | Date | string
@@ -15917,6 +15934,7 @@ export namespace Prisma {
     type?: SortOrder
     name?: SortOrder
     zona?: SortOrder
+    description?: SortOrder
     amount?: SortOrder
     currency?: SortOrder
     createdAt?: SortOrder
@@ -15937,6 +15955,7 @@ export namespace Prisma {
     type?: StringWithAggregatesFilter<"ChargeCategory"> | string
     name?: StringWithAggregatesFilter<"ChargeCategory"> | string
     zona?: StringWithAggregatesFilter<"ChargeCategory"> | string
+    description?: StringWithAggregatesFilter<"ChargeCategory"> | string
     amount?: FloatWithAggregatesFilter<"ChargeCategory"> | number
     currency?: StringWithAggregatesFilter<"ChargeCategory"> | string
     createdAt?: DateTimeWithAggregatesFilter<"ChargeCategory"> | Date | string
@@ -17288,6 +17307,7 @@ export namespace Prisma {
     type: string
     name: string
     zona?: string
+    description?: string
     amount: number
     currency: string
     createdAt?: Date | string
@@ -17300,6 +17320,7 @@ export namespace Prisma {
     type: string
     name: string
     zona?: string
+    description?: string
     amount: number
     currency: string
     createdAt?: Date | string
@@ -17312,6 +17333,7 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     zona?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
     amount?: FloatFieldUpdateOperationsInput | number
     currency?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -17324,6 +17346,7 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     zona?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
     amount?: FloatFieldUpdateOperationsInput | number
     currency?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -17336,6 +17359,7 @@ export namespace Prisma {
     type: string
     name: string
     zona?: string
+    description?: string
     amount: number
     currency: string
     createdAt?: Date | string
@@ -17348,6 +17372,7 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     zona?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
     amount?: FloatFieldUpdateOperationsInput | number
     currency?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -17360,6 +17385,7 @@ export namespace Prisma {
     type?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     zona?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
     amount?: FloatFieldUpdateOperationsInput | number
     currency?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -18409,6 +18435,7 @@ export namespace Prisma {
     type?: SortOrder
     name?: SortOrder
     zona?: SortOrder
+    description?: SortOrder
     amount?: SortOrder
     currency?: SortOrder
     createdAt?: SortOrder
@@ -18426,6 +18453,7 @@ export namespace Prisma {
     type?: SortOrder
     name?: SortOrder
     zona?: SortOrder
+    description?: SortOrder
     amount?: SortOrder
     currency?: SortOrder
     createdAt?: SortOrder
@@ -18437,6 +18465,7 @@ export namespace Prisma {
     type?: SortOrder
     name?: SortOrder
     zona?: SortOrder
+    description?: SortOrder
     amount?: SortOrder
     currency?: SortOrder
     createdAt?: SortOrder

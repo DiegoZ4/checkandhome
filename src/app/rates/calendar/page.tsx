@@ -5,6 +5,8 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Search, X, Save } 
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import { loadProperties, Property } from '@/lib/properties'
+import { loadReservations, type Reservation } from '@/lib/reservations'
+import { canCurrent } from '@/lib/permissions'
 import {
   loadRates,
   saveRates,
@@ -72,10 +74,21 @@ export default function RatesCalendarPage() {
   // Fechas puntuales quitadas a mano desde los chips.
   const [excludedDates, setExcludedDates] = useState<string[]>([])
 
+  // Reservas (para marcar las noches ocupadas) y permiso de edición: quien no puede
+  // modificar tarifas (p. ej. Reservas) usa el calendario sólo para consultar.
+  const [bookings, setBookings] = useState<Reservation[]>([])
+  const canEdit = canCurrent('rates.edit')
+
   useEffect(() => {
-    setProperties(loadProperties().filter(p => !p.eliminado && (p.category || 'alojamiento') === 'alojamiento'))
+    const list = loadProperties().filter(p => !p.eliminado && (p.category || 'alojamiento') === 'alojamiento')
+    setProperties(list)
     setRates(loadRates())
     setPlans(loadRatePlans())
+    setBookings(loadReservations())
+    // ?property=<id> (desde la ficha de la propiedad): filtra por esa propiedad.
+    const only = new URLSearchParams(window.location.search).get('property')
+    const match = only ? list.find(p => String(p.id) === only) : undefined
+    if (match) setSearch(match.name)
     setLoading(false)
   }, [])
 
@@ -161,6 +174,7 @@ export default function RatesCalendarPage() {
   // Click normal: abre el panel en esa fecha. Shift+click: extiende el rango desde la
   // fecha ancla (`from`) hasta la clickeada, siempre dentro de la misma propiedad.
   const handleCellClick = (property: Property, day: Date, shiftKey: boolean) => {
+    if (!canEdit) return // sólo consulta
     if (shiftKey && panel && String(panel.property.id) === String(property.id)) {
       const key = dateKey(day)
       const anchor = panel.from
@@ -228,9 +242,20 @@ export default function RatesCalendarPage() {
   const cellInfo = (property: Property, key: string) => {
     const entry = getEntry(rates, String(property.id), key)
     const status = entry ? getEntryStatus(entry) : 'abierto'
+    // Reserva que ocupa esa noche (el día de check-out queda libre).
+    const booking = bookings.find(r =>
+      r.status !== 'CANCELADA' && String(r.propertyId) === String(property.id) && r.checkInDate <= key && key < r.checkOutDate)
+    const bookingText = booking
+      ? `Reservado: ${`${booking.firstName} ${booking.lastName}`.trim()} (${formatDateKey(booking.checkInDate)} al ${formatDateKey(booking.checkOutDate)})`
+      : ''
     return {
       entry,
       status,
+      booking,
+      // Texto al pasar el mouse: cómo editar, o la reserva en modo consulta.
+      hint: canEdit
+        ? [bookingText, 'Click para editar · Shift + click para seleccionar un rango'].filter(Boolean).join(' · ')
+        : bookingText || undefined,
       matchesPlan: !planFilter || (entry ? entry.planIds.includes(planFilter) : false),
       inSelection: Boolean(panel && String(panel.property.id) === String(property.id) && panelDates.includes(key)),
       stripe: entry ? planStripe(entry.planIds) : undefined,
@@ -265,6 +290,9 @@ export default function RatesCalendarPage() {
         <div className="flex items-center mb-6">
           <CalendarIcon className="h-8 w-8 text-indigo-600 mr-3" />
           <h1 className="text-3xl font-bold text-gray-900">Calendario</h1>
+          {!canEdit && (
+            <span className="ml-3 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">Modo consulta</span>
+          )}
         </div>
 
         {/* Controles: mes/año + HOY */}
@@ -389,13 +417,13 @@ export default function RatesCalendarPage() {
                             return <div key={`empty-${i}`} className="min-h-[4.5rem] border-r border-b border-gray-100 bg-gray-50/40" />
                           }
                           const key = dateKey(d)
-                          const { entry, status, matchesPlan, inSelection, stripe, planNames } = cellInfo(p, key)
+                          const { entry, status, booking, hint, matchesPlan, inSelection, stripe, planNames } = cellInfo(p, key)
                           return (
                             <div
                               key={key}
                               onClick={(e) => handleCellClick(p, d, e.shiftKey)}
-                              title="Click para editar · Shift + click para seleccionar un rango"
-                              className={`relative min-h-[4.5rem] border-r border-b border-gray-100 px-2 pt-1.5 pb-3 text-xs cursor-pointer select-none hover:bg-indigo-50 ${
+                              title={hint}
+                              className={`relative min-h-[4.5rem] border-r border-b border-gray-100 px-2 pt-1.5 pb-3 text-xs select-none ${canEdit ? 'cursor-pointer hover:bg-indigo-50' : ''} ${
                                 status === 'cerrado' ? 'bg-red-50' : status === 'cerrado24' ? 'bg-amber-50' : ''
                               } ${!matchesPlan ? 'opacity-30' : ''} ${
                                 inSelection ? 'bg-indigo-100 ring-2 ring-inset ring-indigo-500' : ''
@@ -413,6 +441,11 @@ export default function RatesCalendarPage() {
                                   <span className="text-gray-800 font-medium">${entry.price.toLocaleString('es-AR')}</span>
                                 ) : (
                                   <span className="text-gray-400">Precio x noche</span>
+                                )}
+                                {booking && (
+                                  <span className="mt-1 block truncate rounded bg-violet-100 px-1 text-[10px] font-medium text-violet-700">
+                                    Reservado
+                                  </span>
                                 )}
                               </div>
                               {stripe && (
@@ -460,17 +493,17 @@ export default function RatesCalendarPage() {
                         {days.map(d => {
                           const key = dateKey(d)
                           // `inSelection` resalta las fechas que va a afectar el panel abierto.
-                          const { entry, status, matchesPlan, inSelection, stripe, planNames } = cellInfo(p, key)
+                          const { entry, status, booking, hint, matchesPlan, inSelection, stripe, planNames } = cellInfo(p, key)
                           return (
                             <td
                               key={key}
                               onClick={(e) => handleCellClick(p, d, e.shiftKey)}
-                              className={`relative w-24 min-w-24 border-r border-gray-100 px-1 py-3 pb-4 text-center text-xs cursor-pointer select-none hover:bg-indigo-50 ${
+                              className={`relative w-24 min-w-24 border-r border-gray-100 px-1 py-3 pb-4 text-center text-xs select-none ${canEdit ? 'cursor-pointer hover:bg-indigo-50' : ''} ${
                                 status === 'cerrado' ? 'bg-red-50' : status === 'cerrado24' ? 'bg-amber-50' : ''
                               } ${!matchesPlan ? 'opacity-30' : ''} ${
                                 inSelection ? 'bg-indigo-100 ring-2 ring-inset ring-indigo-500' : ''
                               }`}
-                              title="Click para editar · Shift + click para seleccionar un rango"
+                              title={hint}
                             >
                               {status === 'cerrado' ? (
                                 <span className="text-red-600 font-medium">Cerrado</span>
@@ -480,6 +513,11 @@ export default function RatesCalendarPage() {
                                 <span className="text-gray-800 font-medium">${entry.price.toLocaleString('es-AR')}</span>
                               ) : (
                                 <span className="text-gray-400">Precio x noche</span>
+                              )}
+                              {booking && (
+                                <span className="mt-1 block truncate rounded bg-violet-100 px-1 text-[10px] font-medium text-violet-700">
+                                  Reservado
+                                </span>
                               )}
                               {stripe && (
                                 <span

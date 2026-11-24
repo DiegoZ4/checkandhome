@@ -21,13 +21,12 @@ import { uploadPhotos } from '@/lib/photoUpload'
 import TimeSelect from '@/components/TimeSelect'
 import {
   loadChargeCategories,
-  loadPetCharges,
+  loadPetCharge,
   categoryLabel,
   formatMoney,
   ChargeCategory,
   ChargeCategoryType,
-  ChargeCurrency,
-  PetCharges,
+  PetCharge,
 } from '@/lib/chargeCategories'
 
 function AlojamientoForm() {
@@ -104,7 +103,7 @@ function AlojamientoForm() {
   // páginas en el servidor (muestra "Cargando datos..." hasta descargar), así que no hay
   // diferencia de hidratación.
   const [chargeCategories] = useState<ChargeCategory[]>(() => loadChargeCategories())
-  const [petCharges] = useState<PetCharges>(() => loadPetCharges())
+  const [petCharge] = useState<PetCharge>(() => loadPetCharge())
 
   // Modo edición: si hay ?id=, precargamos los datos de la propiedad existente.
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -177,7 +176,7 @@ function AlojamientoForm() {
   const selectedCategory = (type: ChargeCategoryType) =>
     categoriesOf(type).find(c => String(c.id) === data.charges[`${type}CategoryId`])
   // Mascotas: precio por mascota y por estadía de Categorías → Mascotas (no se edita acá).
-  const petPrice = petCharges[data.chargesCurrency as ChargeCurrency] || ''
+  const petPrice = petCharge.amount
 
   const selectCategory = (type: ChargeCategoryType, id: string) => {
     const c = chargeCategories.find(x => String(x.id) === id)
@@ -257,7 +256,7 @@ function AlojamientoForm() {
 
     // Cargos condicionales: obligatorios solo si la comodidad está seleccionada.
     if (amenities.mascotas && !petPrice) {
-      newErrors.charge_mascotas = `No hay precio de mascotas en ${data.chargesCurrency}. Cargalo en Categorías → Mascotas.`
+      newErrors.charge_mascotas = 'No hay precio de mascotas cargado. Cargalo en Propiedades → Categorías → Mascotas.'
     }
     if (amenities.cochera && !data.charges.cochera) newErrors.charge_cochera = 'Obligatorio (Cochera seleccionada)'
     if (amenities.jovenes && !data.charges.depositoJoven) newErrors.charge_depositoJoven = 'Obligatorio (Jóvenes seleccionado)'
@@ -617,7 +616,7 @@ function AlojamientoForm() {
                       ) : options.length === 0 ? (
                         <p className="mt-1 text-xs text-amber-600">
                           No hay categorías de {type} en {data.chargesCurrency}.{' '}
-                          <Link href={`/categories?tab=${type}`} className="underline">Cargarlas en Categorías</Link>
+                          <Link href={`/units/categories/${type}`} className="underline">Cargarlas en Categorías</Link>
                         </p>
                       ) : (
                         <p className="mt-1 text-xs text-gray-500">Seleccioná una de las categorías ya cargadas.</p>
@@ -640,7 +639,7 @@ function AlojamientoForm() {
                     <input
                       type="text"
                       id="mascotas"
-                      value={petPrice}
+                      value={petPrice ? formatMoney(petCharge.currency, petPrice) : ''}
                       readOnly
                       disabled
                       className={`${inputClass('charge_mascotas')} bg-gray-100 text-gray-500 cursor-not-allowed pr-9`}
@@ -653,7 +652,7 @@ function AlojamientoForm() {
                   ) : (
                     <p className="mt-1 text-xs text-gray-500">
                       Precio por mascota y por estadía. Se carga automáticamente
-                      {!petPrice && <> (<Link href="/categories?tab=mascotas" className="underline">cargarlo en Categorías → Mascotas</Link>)</>}.
+                      {!petPrice && <> (<Link href="/units/categories" className="underline">cargarlo en Categorías → Mascotas</Link>)</>}.
                     </p>
                   )}
                 </div>

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSessionUser } from '@/lib/server/auth'
+import { getSessionUser, requirePermission } from '@/lib/server/auth'
 import { getSetting, setSetting, SETTING_KEYS } from '@/lib/server/repositories'
 
 export const dynamic = 'force-dynamic'
@@ -20,10 +20,11 @@ export async function GET(req: Request, ctx: Ctx) {
   return NextResponse.json({ value: await getSetting(key) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
-/** PUT body { value } */
+/** PUT body { value } — el precio de mascotas lo edita quien gestiona categorías; el resto, admin. */
 export async function PUT(req: Request, ctx: Ctx) {
-  if (!(await getSessionUser(req))) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const key = await resolveKey(ctx)
+  const auth = await requirePermission(req, key === 'petCharges' ? 'categories.edit' : 'admin.manage')
+  if (auth.error) return auth.error
   if (!key) return NextResponse.json({ error: 'Configuración inexistente' }, { status: 404 })
   let body: { value?: unknown }
   try {

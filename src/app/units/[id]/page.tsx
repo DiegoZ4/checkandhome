@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Home, Car, ArrowLeft, Edit } from 'lucide-react'
+import { Home, Car, ArrowLeft, Edit, CalendarDays } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
@@ -11,9 +11,9 @@ import {
   PROPERTY_TYPES,
   AMENITIES,
   BED_TYPES,
-  CURRENCIES,
 } from '@/lib/properties'
-import { loadChargeCategories, resolvePropertyCharges } from '@/lib/chargeCategories'
+import { loadChargeCategories, loadPetCharge, resolvePropertyCharges, formatMoney } from '@/lib/chargeCategories'
+import { canCurrent } from '@/lib/permissions'
 
 const nameOf = (list: readonly { id: string; name: string }[], id: string) =>
   list.find(i => i.id === id)?.name || id
@@ -70,17 +70,33 @@ export default function PropertyDetailPage() {
   const enabledAmenities = AMENITIES.filter(a => p.amenities?.[a.id])
   // Limpieza / servicio / mascotas con el precio actual de su categoría.
   const current = resolvePropertyCharges(p)
+  const categories = loadChargeCategories()
+  const categoryOf = (id?: string) => (id ? categories.find(x => String(x.id) === id) : undefined)
   const categoryName = (id?: string) => {
-    const c = id ? loadChargeCategories().find(x => String(x.id) === id) : undefined
+    const c = categoryOf(id)
     return c ? ` (${[c.name, c.type === 'servicio' ? c.zona : ''].filter(Boolean).join(' — ')})` : ''
   }
+  const pet = loadPetCharge()
+  // Cada cargo con su moneda: la de la categoría, la del precio de mascotas o la de los cargos.
   const charges = [
-    { label: `Limpieza${categoryName(p.charges?.limpiezaCategoryId)}`, value: current.limpieza ? String(current.limpieza) : '' },
-    { label: `Servicio${categoryName(p.charges?.servicioCategoryId)}`, value: current.servicio ? String(current.servicio) : '' },
-    { label: 'Mascotas (por mascota y por estadía)', value: p.amenities?.mascotas && current.mascotas ? String(current.mascotas) : '' },
-    { label: 'Cochera', value: p.charges?.cochera },
-    { label: 'Depósito', value: p.charges?.deposito },
-    { label: 'Depósito joven', value: p.charges?.depositoJoven },
+    {
+      label: `Limpieza${categoryName(p.charges?.limpiezaCategoryId)}`,
+      value: current.limpieza || '',
+      currency: categoryOf(p.charges?.limpiezaCategoryId)?.currency || p.chargesCurrency,
+    },
+    {
+      label: `Servicio${categoryName(p.charges?.servicioCategoryId)}`,
+      value: current.servicio || '',
+      currency: categoryOf(p.charges?.servicioCategoryId)?.currency || p.chargesCurrency,
+    },
+    {
+      label: 'Mascotas (por mascota y por estadía)',
+      value: p.amenities?.mascotas ? current.mascotas || '' : '',
+      currency: pet.amount ? pet.currency : p.chargesCurrency,
+    },
+    { label: 'Cochera', value: p.charges?.cochera, currency: p.chargesCurrency },
+    { label: 'Depósito', value: p.charges?.deposito, currency: p.chargesCurrency },
+    { label: 'Depósito joven', value: p.charges?.depositoJoven, currency: p.chargesCurrency },
   ].filter(c => c.value)
   const hasBank = Object.values(p.bank || {}).some(Boolean)
 
@@ -109,15 +125,27 @@ export default function PropertyDetailPage() {
                 </p>
               </div>
             </div>
-            {!isCochera && (
-              <Link
-                href={`/units/new?category=${p.category}&id=${p.id}`}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Editar
-              </Link>
-            )}
+            <div className="flex flex-wrap items-center gap-3">
+              {!isCochera && canCurrent('rates.view') && (
+                <Link
+                  href={`/rates/calendar?property=${p.id}`}
+                  className="inline-flex items-center px-4 py-2 border border-indigo-600 shadow-sm text-sm font-medium rounded-md text-indigo-600 bg-white hover:bg-indigo-50"
+                >
+                  <CalendarDays className="h-4 w-4 mr-2" />
+                  Ver disponibilidad
+                </Link>
+              )}
+              {/* La ficha es de sólo lectura para quien no puede editar propiedades (p. ej. Reservas). */}
+              {!isCochera && canCurrent('properties.edit') && (
+                <Link
+                  href={`/units/new?category=${p.category}&id=${p.id}`}
+                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Link>
+              )}
+            </div>
           </div>
         </div>
 
@@ -194,7 +222,7 @@ export default function PropertyDetailPage() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     {charges.map(c => (
-                      <Field key={c.label} label={c.label} value={`${nameOf(CURRENCIES, p.chargesCurrency)} ${c.value}`} />
+                      <Field key={c.label} label={c.label} value={formatMoney(c.currency, c.value!)} />
                     ))}
                   </div>
                 )}

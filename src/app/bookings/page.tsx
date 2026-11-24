@@ -15,6 +15,7 @@ import {
   getCurrencyName,
 } from '@/lib/reservations'
 import { loadProperties, Property, ZONAS, PROPERTY_TYPES, AMENITIES } from '@/lib/properties'
+import { canCurrent } from '@/lib/permissions'
 
 const BEDROOM_BUCKETS = ['1', '2', '3', '4', '+ de 5'] as const
 
@@ -62,7 +63,12 @@ export default function BookingsPage() {
     setList(list.includes(value) ? list.filter(v => v !== value) : [...list, value])
   }
 
+  // Reservas puede crear y editar, pero no eliminar (para dar de baja se usa el estado Cancelada).
+  const canEdit = canCurrent('bookings.edit')
+  const canDelete = canCurrent('bookings.delete')
+
   const deleteReservation = (id: number) => {
+    if (!canDelete) return
     if (confirm('¿Estás seguro de que deseas eliminar esta reserva?')) {
       const updated = reservations.filter(r => r.id !== id)
       setReservations(updated)
@@ -362,8 +368,8 @@ export default function BookingsPage() {
                       <td className="sticky left-0 z-10 bg-white px-3 py-3">
                         <div className="flex space-x-2">
                           <Link href={`/bookings/${r.id}`} className="text-indigo-600 hover:text-indigo-900" title="Ver"><Eye className="h-4 w-4" /></Link>
-                          <Link href={`/bookings/new?id=${r.id}`} className="text-gray-600 hover:text-gray-900" title="Editar"><Edit className="h-4 w-4" /></Link>
-                          <button className="text-red-600 hover:text-red-900" onClick={() => deleteReservation(r.id)} title="Eliminar"><Trash2 className="h-4 w-4" /></button>
+                          {canEdit && <Link href={`/bookings/new?id=${r.id}`} className="text-gray-600 hover:text-gray-900" title="Editar"><Edit className="h-4 w-4" /></Link>}
+                          {canDelete && <button className="text-red-600 hover:text-red-900" onClick={() => deleteReservation(r.id)} title="Eliminar"><Trash2 className="h-4 w-4" /></button>}
                         </div>
                       </td>
                       <td className="px-3 py-3 text-gray-500">{r.id}</td>

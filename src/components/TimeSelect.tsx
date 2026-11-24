@@ -5,6 +5,7 @@
  * Reemplaza a <input type="time">, cuyo selector muestra todos los minutos y no
  * impide elegir un horario menor al mínimo.
  * - min: horario mínimo permitido (p. ej. el "De" para el "Hasta"); lo anterior queda deshabilitado.
+ * - max: horario máximo permitido; lo posterior queda deshabilitado.
  * - Si el valor guardado tiene minutos fuera de la grilla (datos viejos), se muestra igual.
  */
 
@@ -16,17 +17,20 @@ type Props = {
   value: string
   onChange: (value: string) => void
   min?: string
+  max?: string
   className?: string
 }
 
-export default function TimeSelect({ id, value, onChange, min = '', className = '' }: Props) {
+export default function TimeSelect({ id, value, onChange, min = '', max = '', className = '' }: Props) {
   const [hour = '', minute = ''] = value ? value.split(':') : []
-  const [minHour = '', minMinute = ''] = min ? min.split(':') : []
+  const [minHour = ''] = min ? min.split(':') : []
+  const [maxHour = ''] = max ? max.split(':') : []
 
   const minutes = minute && !QUARTERS.includes(minute) ? [...QUARTERS, minute].sort() : QUARTERS
-  const allowed = (h: string, m: string) => !min || `${h}:${m}` >= min
-  // Primer minuto permitido para una hora (si la hora es la del mínimo, desde sus minutos).
-  const firstMinute = (h: string) => (h === minHour ? QUARTERS.find((m) => m >= minMinute) ?? minMinute : '00')
+  const allowed = (h: string, m: string) => (!min || `${h}:${m}` >= min) && (!max || `${h}:${m}` <= max)
+  const hourAllowed = (h: string) => (!min || h >= minHour) && (!max || h <= maxHour)
+  // Primer minuto permitido para una hora (respetando mínimo y máximo).
+  const firstMinute = (h: string) => QUARTERS.find((m) => allowed(h, m)) ?? (min && h === minHour ? min.split(':')[1] : '00')
 
   const changeHour = (h: string) => {
     if (!h) return onChange('')
@@ -46,7 +50,7 @@ export default function TimeSelect({ id, value, onChange, min = '', className = 
       <select id={id} aria-label="Hora" value={hour} onChange={(e) => changeHour(e.target.value)} className={selectClass}>
         <option value="">--</option>
         {HOURS.map((h) => (
-          <option key={h} value={h} disabled={!!min && h < minHour}>
+          <option key={h} value={h} disabled={!hourAllowed(h)}>
             {h}
           </option>
         ))}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, ArrowLeft, Edit, Download } from 'lucide-react'
+import { Calendar, ArrowLeft, Edit, Download, Copy, Check } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
@@ -14,6 +14,9 @@ import {
   getConditionName,
   getCurrencyName,
 } from '@/lib/reservations'
+import { loadProperties } from '@/lib/properties'
+import { buildReservationSummary, copyText } from '@/lib/reservationSummary'
+import { canCurrent } from '@/lib/permissions'
 
 const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div>
@@ -36,6 +39,7 @@ export default function ReservationDetailPage() {
   const id = Number(params.id)
 
   const [reservation, setReservation] = useState<Reservation | null | undefined>(undefined)
+  const [copyState, setCopyState] = useState<'idle' | 'ok' | 'error'>('idle')
 
   useEffect(() => {
     setReservation(loadReservations().find(r => r.id === id) || null)
@@ -65,6 +69,15 @@ export default function ReservationDetailPage() {
   }
 
   const r = reservation
+
+  // Copia el texto de la reserva (con los horarios y el depósito del alojamiento).
+  const handleCopy = async () => {
+    const property = loadProperties().find(p => String(p.id) === String(r.propertyId))
+    const ok = await copyText(buildReservationSummary(r, property))
+    setCopyState(ok ? 'ok' : 'error')
+    setTimeout(() => setCopyState('idle'), 2500)
+  }
+
   const currencySymbol = r.currency === 'PESOS' ? '$' : 'US$'
   const amount = (value: number) => `${currencySymbol}${money(value)}`
 
@@ -90,13 +103,31 @@ export default function ReservationDetailPage() {
                 </p>
               </div>
             </div>
-            <Link
-              href={`/bookings/new?id=${r.id}`}
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Editar
-            </Link>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className={`inline-flex items-center px-4 py-2 border shadow-sm text-sm font-medium rounded-md bg-white transition-colors ${
+                  copyState === 'ok'
+                    ? 'border-green-600 text-green-700'
+                    : copyState === 'error'
+                      ? 'border-red-600 text-red-700'
+                      : 'border-indigo-600 text-indigo-600 hover:bg-indigo-50'
+                }`}
+              >
+                {copyState === 'ok' ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+                {copyState === 'ok' ? '¡Copiado!' : copyState === 'error' ? 'No se pudo copiar' : 'Copiar datos de la reserva'}
+              </button>
+              {canCurrent('bookings.edit') && (
+                <Link
+                  href={`/bookings/new?id=${r.id}`}
+                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Link>
+              )}
+            </div>
           </div>
         </div>
 

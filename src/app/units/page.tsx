@@ -1,8 +1,9 @@
 'use client'
 
-import { Home, Car } from 'lucide-react'
+import { Home, Car, LayoutGrid } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import { canCurrent } from '@/lib/permissions'
 
 export default function PropertiesHomePage() {
   return (
@@ -22,7 +23,7 @@ export default function PropertiesHomePage() {
 
         {/* Cards */}
         <div className="bg-white shadow rounded-lg p-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
             <Link
               href="/units/list?category=alojamiento"
               className="flex flex-col items-center justify-center border-2 border-gray-200 rounded-lg p-10 hover:border-indigo-500 hover:bg-indigo-50 transition-colors group"
@@ -42,6 +43,16 @@ export default function PropertiesHomePage() {
                 Cocheras
               </span>
             </Link>
+
+            {canCurrent('categories.edit') && <Link
+              href="/units/categories"
+              className="flex flex-col items-center justify-center border-2 border-gray-200 rounded-lg p-10 hover:border-indigo-500 hover:bg-indigo-50 transition-colors group"
+            >
+              <LayoutGrid className="h-16 w-16 text-gray-600 group-hover:text-indigo-600 mb-4" />
+              <span className="text-sm font-semibold uppercase tracking-wide text-gray-700">
+                Categorías
+              </span>
+            </Link>}
           </div>
         </div>
       </div>

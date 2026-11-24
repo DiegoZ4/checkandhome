@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSessionUser } from '@/lib/server/auth'
+import { requirePermission } from '@/lib/server/auth'
 import { ALLOWED_TYPES, cleanupOrphanPhotos, MAX_UPLOAD_BYTES, savePhoto } from '@/lib/server/photos'
 
 export const dynamic = 'force-dynamic'
@@ -10,7 +10,8 @@ export const runtime = 'nodejs'
  * Responde { url: "/api/photos/<id>" }. El servidor la achica (máx. 1600px) y recomprime.
  */
 export async function POST(req: Request) {
-  if (!(await getSessionUser(req))) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const auth = await requirePermission(req, 'properties.edit')
+  if (auth.error) return auth.error
 
   const mimeType = (req.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
   if (!ALLOWED_TYPES.includes(mimeType)) {

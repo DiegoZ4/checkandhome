@@ -236,7 +236,8 @@ model ChargeCategory {
   id        BigInt   @id
   type      String // limpieza | servicio
   name      String
-  zona      String   @default("") // sólo servicio
+  zona        String   @default("") // sólo servicio
+  description String   @default("")
   amount    Float
   currency  String // USD | ARS
   createdAt DateTime @default(now())

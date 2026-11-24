@@ -289,6 +289,7 @@ exports.Prisma.ChargeCategoryScalarFieldEnum = {
   type: 'type',
   name: 'name',
   zona: 'zona',
+  description: 'description',
   amount: 'amount',
   currency: 'currency',
   createdAt: 'createdAt',

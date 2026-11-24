@@ -233,15 +233,16 @@ model InventoryItem {
 // categoría (charges.limpiezaCategoryId / servicioCategoryId) y usan siempre su precio
 // actual. El precio de mascotas va en app_settings "petCharges" ({ USD, ARS }).
 model ChargeCategory {
-  id        BigInt   @id
-  type      String // limpieza | servicio
-  name      String
-  zona      String   @default("") // sólo servicio
-  amount    Float
-  currency  String // USD | ARS
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  extra     Json?
+  id          BigInt   @id
+  type        String // limpieza | servicio
+  name        String
+  zona        String   @default("") // sólo servicio
+  description String   @default("")
+  amount      Float
+  currency    String // USD | ARS
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  extra       Json?
 
   @@index([type])
   @@map("charge_categories")

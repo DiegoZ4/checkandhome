@@ -10,7 +10,9 @@ import {
   loadReservations,
   saveReservations,
   calcNights,
-  roundNice,
+  roundUp,
+  senaRoundingBase,
+  nightsFromCalendar,
   CURRENCIES,
   CHANNELS,
   BOOKING_CONDITIONS,
@@ -22,6 +24,16 @@ import {
 } from '@/lib/reservations'
 import { pullFromServer } from '@/lib/cloudSync'
 import { resolvePropertyCharges } from '@/lib/chargeCategories'
+import { loadRates, dateKey, addDays, type RatesMap } from '@/lib/rates'
+
+/** "2026-11-10" -> "2026-11-11" */
+const nextDay = (d: string) => {
+  const [y, m, day] = d.split('-').map(Number)
+  return dateKey(addDays(new Date(y, m - 1, day), 1))
+}
+
+/** "14:00" -> "14", "14:30" -> "14:30" (para los textos de ayuda) */
+const hourText = (t: string) => (t.endsWith(':00') ? String(Number(t.slice(0, 2))) : t)
 
 // "2026-11-17" -> "17/11"
 const shortDate = (d: string) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}` : '?')
@@ -40,6 +52,13 @@ function BookingForm() {
   const [cocheras, setCocheras] = useState<Property[]>([])
   // Todas las reservas, para avisar si las fechas elegidas ya están ocupadas.
   const [allReservations, setAllReservations] = useState<Reservation[]>([])
+  // Calendario de tarifas (precio de cada noche). CloudSyncGate no renderiza en el
+  // servidor, así que se puede leer localStorage al iniciar.
+  const [rates] = useState<RatesMap>(() => loadRates())
+  const today = dateKey(new Date())
+  // Al editar: datos originales, para no recalcular el valor de las noches si no cambian
+  // propiedad ni fechas (el calendario pudo cambiar de precio después de reservar).
+  const [original, setOriginal] = useState<{ propertyId: string; checkInDate: string; checkOutDate: string; valorNoches: number } | null>(null)
 
   // Excepción de DNI: solo un admin puede confirmar una reserva Directa/Booking sin el archivo.
   const [isAdmin, setIsAdmin] = useState(false)
@@ -139,6 +158,12 @@ function BookingForm() {
     setHasVideo(found.hasVideo)
     setVideoName(found.videoName)
     setVideoUrl(found.videoUrl || '')
+    setOriginal({
+      propertyId: found.propertyId,
+      checkInDate: found.checkInDate,
+      checkOutDate: found.checkOutDate,
+      valorNoches: found.valorNoches,
+    })
   }, [editIdParam])
 
   const selectedProperty = properties.find(p => String(p.id) === data.propertyId)
@@ -161,8 +186,17 @@ function BookingForm() {
   const [propertySearch, setPropertySearch] = useState('')
   const filteredProperties = properties.filter(p => p.name.toLowerCase().includes(propertySearch.toLowerCase()))
 
+  // Horario permitido por la propiedad (vacío = sin límite).
+  const inRange = (t: string, from?: string, to?: string) => !t || ((!from || t >= from) && (!to || t <= to))
+
   const selectProperty = (p: Property) => {
-    setData(prev => ({ ...prev, propertyId: String(p.id) }))
+    // Los horarios fuera del rango de la nueva propiedad se borran.
+    setData(prev => ({
+      ...prev,
+      propertyId: String(p.id),
+      checkInTime: inRange(prev.checkInTime, p.checkInFrom, p.checkInTo) ? prev.checkInTime : '',
+      checkOutTime: inRange(prev.checkOutTime, p.checkOutFrom, p.checkOutTo) ? prev.checkOutTime : '',
+    }))
     if (errors.propertyId) setErrors(prev => ({ ...prev, propertyId: '' }))
     setShowPropertyDropdown(false)
   }
@@ -173,6 +207,10 @@ function BookingForm() {
       ...prev,
       [name]: value,
       ...(name === 'channel' && value !== 'BOOKING' ? { condition: '' } : {}),
+      // El check-out tiene que ser al menos un día después del check-in.
+      ...(name === 'checkInDate' && value && (!prev.checkOutDate || prev.checkOutDate <= value)
+        ? { checkOutDate: nextDay(value) }
+        : {}),
     }))
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }))
   }
@@ -221,9 +259,24 @@ function BookingForm() {
   // ---- Cálculos en vivo ----
   const num = (v: string) => (v === '' ? 0 : parseFloat(v) || 0)
 
+  // Valor de las noches: suma de los precios del calendario de la propiedad.
+  const nightly = useMemo(
+    () => nightsFromCalendar(rates, data.propertyId, data.checkInDate, data.checkOutDate),
+    [rates, data.propertyId, data.checkInDate, data.checkOutDate],
+  )
+  // Editando sin cambiar propiedad ni fechas: se respeta el valor con el que se reservó.
+  const keepOriginalNights = !!original &&
+    original.propertyId === data.propertyId &&
+    original.checkInDate === data.checkInDate &&
+    original.checkOutDate === data.checkOutDate
+
+  // Mascotas: sólo si la propiedad las acepta, hasta su cantidad máxima.
+  const acceptsPets = !!selectedProperty?.amenities?.mascotas
+  const maxPets = acceptsPets ? parseInt(selectedProperty?.mascotasCantidad || '') || 0 : 0
+
   const calc = useMemo(() => {
     const nights = calcNights(data.checkInDate, data.checkOutDate)
-    const valorNoches = num(data.valorNoches)
+    const valorNoches = keepOriginalNights ? original!.valorNoches : nightly.total
 
     // Limpieza, servicio y mascotas: precios actuales de las categorías del alojamiento.
     const categoryCharges = selectedProperty ? resolvePropertyCharges(selectedProperty) : null
@@ -247,11 +300,12 @@ function BookingForm() {
     const totalBruto = totalNeto + cargos
 
     const senaPct = num(data.senaPct)
-    const senaValue = roundNice((totalBruto * senaPct) / 100) // redondeado
+    // Seña: porcentaje del total, redondeado hacia arriba ($1.000 en pesos, US$10 en dólares).
+    const senaValue = roundUp((totalBruto * senaPct) / 100, senaRoundingBase(data.currency))
     const restante = Math.max(0, totalBruto - senaValue)
 
     return { nights, valorNoches, mascotasValue, cocheraValue, totalNeto, cargos, totalBruto, senaValue, restante }
-  }, [data, selectedProperty])
+  }, [data, selectedProperty, nightly, keepOriginalNights, original])
 
   const money = (v: number) => v.toLocaleString('es-AR')
   const currencySymbol = data.currency === 'PESOS' ? '$' : 'US$'
@@ -285,7 +339,30 @@ function BookingForm() {
     if (!data.checkInDate) newErrors.checkInDate = 'Fecha de check-in obligatoria'
     if (!data.checkOutDate) newErrors.checkOutDate = 'Fecha de check-out obligatoria'
     if (data.checkInDate && data.checkOutDate && calc.nights <= 0) {
-      newErrors.checkOutDate = 'El check-out debe ser posterior al check-in'
+      newErrors.checkOutDate = 'El check-out debe ser al menos un día después del check-in'
+    }
+    // No se puede reservar en el pasado (al editar, sólo si se cambió la fecha).
+    if (data.checkInDate && data.checkInDate < today && data.checkInDate !== original?.checkInDate) {
+      newErrors.checkInDate = 'El check-in no puede ser anterior a hoy'
+    }
+    // Horarios dentro de los configurados en la propiedad.
+    const p = selectedProperty
+    if (p && !inRange(data.checkInTime, p.checkInFrom, p.checkInTo)) {
+      newErrors.checkInTime = `Fuera del horario de la propiedad (${hourText(p.checkInFrom)} a ${hourText(p.checkInTo)} hs)`
+    }
+    if (p && !inRange(data.checkOutTime, p.checkOutFrom, p.checkOutTo)) {
+      newErrors.checkOutTime = `Fuera del horario de la propiedad (${hourText(p.checkOutFrom)} a ${hourText(p.checkOutTo)} hs)`
+    }
+    // Todas las noches tienen que tener precio en el calendario.
+    if (!keepOriginalNights && nightly.missing.length) {
+      newErrors.valorNoches = `Faltan precios en el calendario para: ${nightly.missing.map(d => shortDate(d)).join(', ')}`
+    }
+    // Mascotas: la propiedad las tiene que aceptar y no superar su máximo.
+    if (data.mascotasEnabled) {
+      const qty = parseInt(data.mascotasQty) || 0
+      if (!acceptsPets) newErrors.mascotasQty = 'La propiedad no acepta mascotas'
+      else if (qty < 1) newErrors.mascotasQty = 'Indicá cuántas mascotas'
+      else if (maxPets && qty > maxPets) newErrors.mascotasQty = `La propiedad admite hasta ${maxPets} mascota${maxPets === 1 ? '' : 's'}`
     }
     if (!data.firstName.trim()) newErrors.firstName = 'Nombre obligatorio'
     if (!data.lastName.trim()) newErrors.lastName = 'Apellido obligatorio'
@@ -486,12 +563,29 @@ function BookingForm() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label htmlFor="checkInDate" className="block text-sm font-medium text-gray-700">Fecha check-in *</label>
-                  <input type="date" id="checkInDate" name="checkInDate" value={data.checkInDate} onChange={handleChange} className={`mt-1 ${inputClass('checkInDate')}`} />
+                  <input
+                    type="date"
+                    id="checkInDate"
+                    name="checkInDate"
+                    value={data.checkInDate}
+                    // Al editar una reserva ya pasada se deja su fecha original como mínimo.
+                    min={original?.checkInDate && original.checkInDate < today ? original.checkInDate : today}
+                    onChange={handleChange}
+                    className={`mt-1 ${inputClass('checkInDate')}`}
+                  />
                   {errors.checkInDate && <p className="mt-2 text-sm text-red-600">{errors.checkInDate}</p>}
                 </div>
                 <div>
                   <label htmlFor="checkOutDate" className="block text-sm font-medium text-gray-700">Fecha check-out *</label>
-                  <input type="date" id="checkOutDate" name="checkOutDate" value={data.checkOutDate} onChange={handleChange} className={`mt-1 ${inputClass('checkOutDate')}`} />
+                  <input
+                    type="date"
+                    id="checkOutDate"
+                    name="checkOutDate"
+                    value={data.checkOutDate}
+                    min={data.checkInDate ? nextDay(data.checkInDate) : nextDay(today)}
+                    onChange={handleChange}
+                    className={`mt-1 ${inputClass('checkOutDate')}`}
+                  />
                   {errors.checkOutDate && <p className="mt-2 text-sm text-red-600">{errors.checkOutDate}</p>}
                 </div>
                 <div>
@@ -513,11 +607,35 @@ function BookingForm() {
                 </div>
                 <div>
                   <label htmlFor="checkInTime" className="block text-sm font-medium text-gray-700">Horario check-in</label>
-                  <TimeSelect id="checkInTime" className="mt-1" value={data.checkInTime} onChange={v => setData(prev => ({ ...prev, checkInTime: v }))} />
+                  <TimeSelect
+                    id="checkInTime"
+                    className="mt-1"
+                    value={data.checkInTime}
+                    min={selectedProperty?.checkInFrom}
+                    max={selectedProperty?.checkInTo}
+                    onChange={v => { setData(prev => ({ ...prev, checkInTime: v })); setErrors(prev => ({ ...prev, checkInTime: '' })) }}
+                  />
+                  {errors.checkInTime ? (
+                    <p className="mt-2 text-sm text-red-600">{errors.checkInTime}</p>
+                  ) : selectedProperty?.checkInFrom && selectedProperty?.checkInTo ? (
+                    <p className="mt-1 text-xs text-gray-500">Horario de la propiedad: {hourText(selectedProperty.checkInFrom)} a {hourText(selectedProperty.checkInTo)} hs</p>
+                  ) : null}
                 </div>
                 <div>
                   <label htmlFor="checkOutTime" className="block text-sm font-medium text-gray-700">Horario check-out</label>
-                  <TimeSelect id="checkOutTime" className="mt-1" value={data.checkOutTime} onChange={v => setData(prev => ({ ...prev, checkOutTime: v }))} />
+                  <TimeSelect
+                    id="checkOutTime"
+                    className="mt-1"
+                    value={data.checkOutTime}
+                    min={selectedProperty?.checkOutFrom}
+                    max={selectedProperty?.checkOutTo}
+                    onChange={v => { setData(prev => ({ ...prev, checkOutTime: v })); setErrors(prev => ({ ...prev, checkOutTime: '' })) }}
+                  />
+                  {errors.checkOutTime ? (
+                    <p className="mt-2 text-sm text-red-600">{errors.checkOutTime}</p>
+                  ) : selectedProperty?.checkOutFrom && selectedProperty?.checkOutTo ? (
+                    <p className="mt-1 text-xs text-gray-500">Horario de la propiedad: {hourText(selectedProperty.checkOutFrom)} a {hourText(selectedProperty.checkOutTo)} hs</p>
+                  ) : null}
                 </div>
               </div>
               {overlaps.property.length > 0 && !errors.checkInDate && (
@@ -638,25 +756,75 @@ function BookingForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="valorNoches" className="block text-sm font-medium text-gray-700">Valor noches</label>
-                  <input type="number" min="0" step="0.01" id="valorNoches" name="valorNoches" value={data.valorNoches} onChange={handleChange} className={`mt-1 ${inputClass()}`} placeholder="0" />
-                  <p className="mt-1 text-xs text-gray-500">Sumatoria del valor de cada noche de la reserva.</p>
+                  <input
+                    type="text"
+                    id="valorNoches"
+                    readOnly
+                    value={`${currencySymbol}${money(calc.valorNoches)}`}
+                    className={`mt-1 ${inputClass('valorNoches')} bg-gray-50 cursor-default`}
+                  />
+                  {errors.valorNoches ? (
+                    <p className="mt-2 text-sm text-red-600">{errors.valorNoches}</p>
+                  ) : keepOriginalNights ? (
+                    <p className="mt-1 text-xs text-gray-500">Valor con el que se hizo la reserva. Se recalcula si cambiás la propiedad o las fechas.</p>
+                  ) : (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Suma automática del precio de cada noche en el calendario
+                      {nightly.count > 0 && ` (${nightly.count} noche${nightly.count === 1 ? '' : 's'})`}.
+                    </p>
+                  )}
+                  {!keepOriginalNights && !errors.valorNoches && nightly.missing.length > 0 && (
+                    <p className="mt-1 text-xs text-amber-600">
+                      Sin precio en el calendario: {nightly.missing.map(d => shortDate(d)).join(', ')}.{' '}
+                      <Link href="/rates/calendar" className="underline">Cargar precios</Link>
+                    </p>
+                  )}
+                  {!keepOriginalNights && nightly.closed.length > 0 && (
+                    <p className="mt-1 text-xs text-amber-600">
+                      Atención: el calendario tiene cerradas estas noches: {nightly.closed.map(d => shortDate(d)).join(', ')}.
+                    </p>
+                  )}
                 </div>
 
-                {/* Mascotas */}
-                <div className="flex items-end gap-3">
-                  <div className="flex items-center pb-2">
-                    <button type="button" onClick={() => setData(prev => ({ ...prev, mascotasEnabled: !prev.mascotasEnabled }))}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${data.mascotasEnabled ? 'bg-indigo-600' : 'bg-gray-200'}`}>
-                      <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${data.mascotasEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </button>
-                    <span className="ml-3 text-sm text-gray-700">Mascotas</span>
-                  </div>
-                  {data.mascotasEnabled && (
-                    <div className="flex-1">
-                      <label htmlFor="mascotasQty" className="block text-xs text-gray-500">Cantidad</label>
-                      <input type="number" min="1" id="mascotasQty" name="mascotasQty" value={data.mascotasQty} onChange={handleChange} className={`mt-1 ${inputClass()}`} />
+                {/* Mascotas: sólo si la propiedad las acepta, hasta su máximo */}
+                <div>
+                  <div className="flex items-end gap-3">
+                    <div className="flex items-center pb-2">
+                      <button
+                        type="button"
+                        disabled={!!selectedProperty && !acceptsPets && !data.mascotasEnabled}
+                        onClick={() => {
+                          setData(prev => ({ ...prev, mascotasEnabled: !prev.mascotasEnabled }))
+                          setErrors(prev => ({ ...prev, mascotasQty: '' }))
+                        }}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${data.mascotasEnabled ? 'bg-indigo-600' : 'bg-gray-200'}`}>
+                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${data.mascotasEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                      <span className="ml-3 text-sm text-gray-700">Mascotas</span>
                     </div>
-                  )}
+                    {data.mascotasEnabled && (
+                      <div className="flex-1">
+                        <label htmlFor="mascotasQty" className="block text-xs text-gray-500">Cantidad</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max={maxPets || undefined}
+                          id="mascotasQty"
+                          name="mascotasQty"
+                          value={data.mascotasQty}
+                          onChange={handleChange}
+                          className={`mt-1 ${inputClass('mascotasQty')}`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {errors.mascotasQty ? (
+                    <p className="mt-2 text-sm text-red-600">{errors.mascotasQty}</p>
+                  ) : selectedProperty && !acceptsPets ? (
+                    <p className="mt-1 text-xs text-gray-500">La propiedad no acepta mascotas.</p>
+                  ) : maxPets > 0 ? (
+                    <p className="mt-1 text-xs text-gray-500">Máximo de la propiedad: {maxPets}</p>
+                  ) : null}
                 </div>
 
                 {/* Cochera */}

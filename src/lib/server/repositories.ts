@@ -97,9 +97,49 @@ const reservationRows = numericIdCollection(prisma.reservation as unknown as Del
 
 // El video subido (tabla `videos` + archivo) se asocia a la reserva al guardarla; si la
 // reserva cambia de video o se borra, el anterior se elimina.
+const shortDate = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`
+
+/**
+ * Verifica la disponibilidad antes de guardar: la propiedad (y la cochera, si se pidió)
+ * no puede tener otra reserva no cancelada que se cruce con las fechas. El día de
+ * check-out queda libre. Si la reserva ya existía y no cambió propiedad / cochera /
+ * fechas, no se vuelve a verificar (para poder editar otros datos de reservas viejas).
+ */
+async function checkAvailability(item: Item) {
+  if (item.status === 'CANCELADA') return
+  const id = toBigId(item.id)
+  const propertyId = String(item.propertyId ?? '')
+  const checkIn = String(item.checkInDate ?? '')
+  const checkOut = String(item.checkOutDate ?? '')
+  if (!propertyId || !checkIn || !checkOut) return
+  if (checkIn >= checkOut) throw new BadItemError('El check-out debe ser posterior al check-in.')
+
+  const prev = await prisma.reservation.findUnique({ where: { id } })
+  const sameDates = !!prev && prev.status !== 'CANCELADA' && prev.checkInDate === checkIn && prev.checkOutDate === checkOut
+  const overlapping = { id: { not: id }, status: { not: 'CANCELADA' }, checkInDate: { lt: checkOut }, checkOutDate: { gt: checkIn } }
+  const who = (r: { firstName: string; lastName: string; checkInDate: string; checkOutDate: string }) =>
+    `del ${shortDate(r.checkInDate)} al ${shortDate(r.checkOutDate)} (${`${r.firstName} ${r.lastName}`.trim() || 'sin nombre'})`
+
+  if (!(sameDates && prev!.propertyId === propertyId)) {
+    const clash = await prisma.reservation.findFirst({ where: { ...overlapping, propertyId } })
+    if (clash) {
+      throw new BadItemError(
+        `${clash.propertyName || 'La propiedad'} ya está reservada ${who(clash)}. No se guardaron los cambios.`,
+      )
+    }
+  }
+
+  const cocheraId = item.cocheraEnabled ? String(item.cocheraId ?? '') : ''
+  if (cocheraId && !(sameDates && prev!.cocheraEnabled && prev!.cocheraId === cocheraId)) {
+    const clash = await prisma.reservation.findFirst({ where: { ...overlapping, cocheraEnabled: true, cocheraId } })
+    if (clash) throw new BadItemError(`La cochera ya está reservada ${who(clash)}. No se guardaron los cambios.`)
+  }
+}
+
 export const reservations: Collection = {
   list: () => reservationRows.list(),
   async apply({ upsert = [], delete: del = [] }) {
+    for (const item of upsert) await checkAvailability(item)
     await reservationRows.apply({ upsert, delete: del })
     for (const item of upsert) await linkVideo(String(item.id), item.videoUrl)
     await deleteVideosOf(del)
@@ -127,7 +167,7 @@ export const inventory = numericIdCollection(prisma.inventoryItem as unknown as 
 // ---------- Categorías de cargos (Limpieza / Servicio) ----------
 
 export const chargeCategories = numericIdCollection(prisma.chargeCategory as unknown as Delegate, {
-  str: ['type', 'name', 'zona', 'currency'],
+  str: ['type', 'name', 'zona', 'description', 'currency'],
   float: ['amount'],
   date: ['createdAt'],
 })
@@ -235,6 +275,8 @@ export const users: Collection = {
         typeof prisma.user.create
       >[0]['data']
       if (!data.email) throw new BadItemError('Usuario sin email')
+      const sameEmail = await prisma.user.findFirst({ where: { email: data.email, id: { not: id } }, select: { id: true } })
+      if (sameEmail) throw new BadItemError(`Ya existe otro usuario con el email ${data.email}`)
       const password = typeof item.password === 'string' ? item.password : ''
       if (password) {
         const passwordHash = hashPassword(password)
@@ -252,7 +294,8 @@ export const users: Collection = {
 
 // ---------- Configuración ----------
 
-// petCharges: precio por mascota y por estadía, { USD: string, ARS: string } (Categorías → Mascotas).
+// petCharges: precio por mascota y por estadía, { amount: string, currency: 'USD' | 'ARS' }
+// (Propiedades → Categorías → Mascotas).
 export const SETTING_KEYS = ['userSettings', 'channelConfig', 'general', 'petCharges'] as const
 export type SettingKey = (typeof SETTING_KEYS)[number]
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSessionUser } from '@/lib/server/auth'
+import { requirePermission } from '@/lib/server/auth'
 import { cleanupOrphanVideos, MAX_VIDEO_BYTES, saveVideo, VideoTooLargeError } from '@/lib/server/videos'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +11,8 @@ export const runtime = 'nodejs'
  * Responde { url: "/api/videos/<id>" }.
  */
 export async function POST(req: Request) {
-  if (!(await getSessionUser(req))) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const auth = await requirePermission(req, 'bookings.edit')
+  if (auth.error) return auth.error
 
   const mimeType = (req.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
   if (!/^video\/[a-z0-9.+-]+$/.test(mimeType)) {

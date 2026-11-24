@@ -1,6 +1,8 @@
 // Modelo de datos, constantes y helpers de cálculo para Reservas.
 // Persistencia en localStorage (demo), igual que el resto de la app.
 
+import { addDays, dateKey, getEntry, isEntryAvailable, type RatesMap } from './rates'
+
 export const RESERVATIONS_STORAGE_KEY = 'checkAndPointBookings'
 
 export type ReservationStatus = 'CONFIRMADA' | 'PENDIENTE' | 'CANCELADA'
@@ -115,10 +117,36 @@ export function calcNights(checkIn: string, checkOut: string): number {
   return Math.round(diff / (1000 * 60 * 60 * 24))
 }
 
-// Redondeo "lindo" a la base de 1000 más cercana (ej: 23248 -> 23000).
-export function roundNice(value: number, base = 1000): number {
+// Redondeo hacia arriba a la base (ej: 23248 -> 24000 con base 1000; 56 -> 60 con base 10).
+export function roundUp(value: number, base: number): number {
   if (!value || value < 0) return 0
-  return Math.round(value / base) * base
+  return Math.ceil(value / base) * base
+}
+
+// Base de redondeo de la seña según la moneda: pesos a los $1.000, dólares a los US$10.
+export function senaRoundingBase(currency: string): number {
+  return currency === 'PESOS' ? 1000 : 10
+}
+
+/**
+ * Valor de las noches según el calendario de tarifas: suma el precio de cada noche
+ * (desde el check-in hasta el día anterior al check-out).
+ * - missing: noches sin precio cargado en el calendario.
+ * - closed: noches cerradas en el calendario.
+ */
+export function nightsFromCalendar(rates: RatesMap, propertyId: string, checkIn: string, checkOut: string) {
+  const result = { total: 0, count: 0, missing: [] as string[], closed: [] as string[] }
+  if (!propertyId || !checkIn || !checkOut || checkIn >= checkOut) return result
+  const [y, m, d] = checkIn.split('-').map(Number)
+  for (let day = new Date(y, m - 1, d); dateKey(day) < checkOut; day = addDays(day, 1)) {
+    const key = dateKey(day)
+    const entry = getEntry(rates, propertyId, key)
+    result.count++
+    if (!entry || !(entry.price > 0)) result.missing.push(key)
+    else result.total += entry.price
+    if (entry && !isEntryAvailable(entry)) result.closed.push(key)
+  }
+  return result
 }
 
 /**

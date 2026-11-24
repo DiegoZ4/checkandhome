@@ -2,14 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react'
 import {
-  Menu, X, LogOut, Home, Users, Calendar, CalendarRange, Building2, BarChart3, ChevronRight, Tags,
+  Menu, X, LogOut, Home, Users, Calendar, CalendarRange, Building2, BarChart3, ChevronRight,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { can, permissionForPath, userTypeOf } from '@/lib/permissions'
 
 interface User {
   email: string;
   role: string;
+  type?: string;
   name?: string;
   token: string;
 }
@@ -54,16 +56,7 @@ const MENU_ITEMS: {
     children: [
       { label: 'Alojamientos', href: '/units/list?category=alojamiento' },
       { label: 'Cocheras', href: '/units/list?category=cochera' },
-    ],
-  },
-  {
-    label: 'Categorías',
-    href: '/categories',
-    icon: Tags,
-    children: [
-      { label: 'Limpieza', href: '/categories?tab=limpieza' },
-      { label: 'Servicio', href: '/categories?tab=servicio' },
-      { label: 'Mascotas', href: '/categories?tab=mascotas' },
+      { label: 'Categorías', href: '/units/categories' },
     ],
   },
   // { label: 'Cocheras', href: '/units/list?category=cochera', icon: Car },
@@ -133,6 +126,16 @@ export default function Navbar({ title = "Check and Point" }: NavbarProps) {
     }
     checkAuth()
   }, [pathname])
+
+  // Menú según los permisos del tipo de usuario (se ocultan las secciones sin acceso).
+  const userType = userTypeOf(user)
+  const allowed = (href: string) => {
+    const perm = permissionForPath(href.split('?')[0])
+    return !perm || can(userType, perm)
+  }
+  const visibleMenu = MENU_ITEMS
+    .filter(item => allowed(item.href))
+    .map(item => (item.children ? { ...item, children: item.children.filter(c => allowed(c.href)) } : item))
 
   // Título de la pestaña del navegador
   useEffect(() => { if (title) document.title = title }, [title])
@@ -223,7 +226,7 @@ export default function Navbar({ title = "Check and Point" }: NavbarProps) {
             )}
 
             <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
-              {MENU_ITEMS.map((item) => {
+              {visibleMenu.map((item) => {
                 const active = item.href === '/dashboard'
                   ? pathname === '/dashboard'
                   : pathname.startsWith(item.href.split('?')[0])

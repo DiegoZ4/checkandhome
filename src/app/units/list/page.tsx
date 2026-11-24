@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import { loadProperties, saveProperties, Property, PropertyCategory } from '@/lib/properties'
+import { canCurrent } from '@/lib/permissions'
 
 function PropertiesTable() {
   const searchParams = useSearchParams()
@@ -37,7 +38,9 @@ function PropertiesTable() {
     setLoading(false)
   }, [])
 
-  const canDelete = isCochera || isAdmin
+  // Usuarios que sólo consultan (p. ej. Reservas): ven el listado y la ficha, sin editar.
+  const canEdit = canCurrent('properties.edit')
+  const canDelete = canEdit && (isCochera || isAdmin)
 
   // Confirmación de borrado: propiedad pendiente de confirmar (o null si el modal está cerrado).
   const [confirmTarget, setConfirmTarget] = useState<Property | null>(null)
@@ -92,10 +95,10 @@ function PropertiesTable() {
             <Icon className="h-8 w-8 text-indigo-600 mr-3" />
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
-              <p className="mt-1 text-sm text-gray-500">Gestiona tus propiedades</p>
+              <p className="mt-1 text-sm text-gray-500">{canEdit ? 'Gestiona tus propiedades' : 'Consultá los datos y la disponibilidad de cada propiedad'}</p>
             </div>
           </div>
-          <div className="mt-4 sm:mt-0 flex items-center space-x-3">
+          {canEdit && <div className="mt-4 sm:mt-0 flex items-center space-x-3">
             {/* Papelera */}
             <Link
               href={`/units/trash?category=${category}`}
@@ -116,7 +119,7 @@ function PropertiesTable() {
               <Plus className="h-4 w-4 mr-2" />
               {addLabel}
             </Link>
-          </div>
+          </div>}
         </div>
 
         {/* Buscador + Alternar vista */}
@@ -174,7 +177,7 @@ function PropertiesTable() {
                   ? (isCochera ? 'Comienza agregando una nueva cochera.' : 'Comienza agregando una nueva propiedad.')
                   : 'Prueba con otros términos de búsqueda.'}
               </p>
-              {visible.length === 0 && (
+              {visible.length === 0 && canEdit && (
                 <div className="mt-6">
                   <Link
                     href={`/units/new?category=${category}`}
@@ -220,7 +223,7 @@ function PropertiesTable() {
                       >
                         <Eye className="h-4 w-4 mr-1" /> Ver
                       </Link>
-                      {isCochera ? (
+                      {!canEdit ? null : isCochera ? (
                         <button
                           className="text-gray-600 hover:text-gray-900 text-sm font-medium flex items-center"
                           onClick={() => alert(`Editar ${p.name} - Próximamente`)}
@@ -278,7 +281,7 @@ function PropertiesTable() {
                           <Link href={`/units/${p.id}`} className="text-indigo-600 hover:text-indigo-900" title="Ver">
                             <Eye className="h-4 w-4" />
                           </Link>
-                          {isCochera ? (
+                          {!canEdit ? null : isCochera ? (
                             <button
                               className="text-gray-600 hover:text-gray-900"
                               onClick={() => alert(`Editar ${p.name} - Próximamente`)}

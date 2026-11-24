@@ -180,6 +180,9 @@ function getToken(): string | null {
   }
 }
 
+// Motivo del último cambio rechazado por el servidor (sin permiso, reserva superpuesta, ...).
+let lastRejection = ''
+
 async function sendOp(op: Op, token: string, keepalive: boolean): Promise<'ok' | 'unauthorized' | 'retry' | 'rejected'> {
   const cfg = byKey.get(op.key)
   if (!cfg) return 'rejected'
@@ -196,6 +199,7 @@ async function sendOp(op: Op, token: string, keepalive: boolean): Promise<'ok' |
     if (res.status >= 400 && res.status < 500) {
       const err = await res.json().catch(() => ({}))
       console.error(`[cloudSync] El servidor rechazó un cambio en ${cfg.endpoint}:`, err.error || res.status, op)
+      lastRejection = err.error || ''
       return 'rejected'
     }
     return res.ok ? 'ok' : 'retry'
@@ -213,6 +217,7 @@ export async function flush(keepalive = false): Promise<void> {
   if (!token) return
 
   flushing = true
+  let rejected = false
   try {
     // Se envían en orden; cada op se saca de la cola recién cuando el servidor la confirma.
     for (;;) {
@@ -230,13 +235,17 @@ export async function flush(keepalive = false): Promise<void> {
         return
       }
       if (r === 'rejected') {
-        alert('No se pudo guardar un cambio en el servidor (datos inválidos). Revisá la consola para más detalle.')
+        alert(`No se pudo guardar el cambio: ${lastRejection || 'el servidor lo rechazó (datos inválidos).'}`)
+        rejected = true
       }
       const now = readQueue()
       if (now.length && JSON.stringify(now[0]) === JSON.stringify(op)) writeQueue(now.slice(1))
     }
   } finally {
     flushing = false
+    // Si el servidor rechazó algo, se vuelve a descargar para que la pantalla muestre
+    // los datos guardados (los anteriores al cambio rechazado).
+    if (rejected) void pullFromServer().then(() => window.dispatchEvent(new Event('checkandpoint:data-restored')))
   }
 }
 
@@ -290,10 +299,11 @@ export async function pullFromServer(token = getToken()): Promise<PullResult> {
       COLLECTIONS.map(async (cfg) => {
         const res = await fetch(cfg.endpoint, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
         if (res.status === 401) throw new Error('unauthorized')
+        if (res.status === 403) return null // el tipo de usuario no puede ver esta colección
         if (!res.ok) throw new Error('offline')
         return { cfg, data: await res.json() }
       }),
-    )
+    ).then((list) => list.filter((x): x is NonNullable<typeof x> => x !== null))
   } catch (err) {
     return (err as Error).message === 'unauthorized' ? 'unauthorized' : 'offline'
   }

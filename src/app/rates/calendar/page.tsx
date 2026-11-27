@@ -51,6 +51,19 @@ function parseDateKey(key: string) {
   return new Date(year, month - 1, day)
 }
 
+/** Marca de reserva en una celda: confirmada (ocupa la noche) o pendiente (no ocupa). */
+function BookingBadge({ confirmed }: { confirmed: boolean }) {
+  return (
+    <span
+      className={`mt-1 block truncate rounded px-1 text-[10px] font-medium ${
+        confirmed ? 'bg-violet-100 text-violet-700' : 'bg-amber-100 text-amber-700'
+      }`}
+    >
+      {confirmed ? 'Reservado' : 'Pendiente'}
+    </span>
+  )
+}
+
 export default function RatesCalendarPage() {
   const [loading, setLoading] = useState(true)
   const [properties, setProperties] = useState<Property[]>([])
@@ -242,11 +255,13 @@ export default function RatesCalendarPage() {
   const cellInfo = (property: Property, key: string) => {
     const entry = getEntry(rates, String(property.id), key)
     const status = entry ? getEntryStatus(entry) : 'abierto'
-    // Reserva que ocupa esa noche (el día de check-out queda libre).
-    const booking = bookings.find(r =>
+    // Reserva de esa noche (el día de check-out queda libre). Las confirmadas ocupan la
+    // noche; las pendientes no (igual que en el buscador de disponibilidad), sólo se muestran.
+    const covering = bookings.filter(r =>
       r.status !== 'CANCELADA' && String(r.propertyId) === String(property.id) && r.checkInDate <= key && key < r.checkOutDate)
+    const booking = covering.find(r => r.status === 'CONFIRMADA') || covering[0]
     const bookingText = booking
-      ? `Reservado: ${`${booking.firstName} ${booking.lastName}`.trim()} (${formatDateKey(booking.checkInDate)} al ${formatDateKey(booking.checkOutDate)})`
+      ? `${booking.status === 'CONFIRMADA' ? 'Reservado' : 'Pendiente'}: ${`${booking.firstName} ${booking.lastName}`.trim()} (${formatDateKey(booking.checkInDate)} al ${formatDateKey(booking.checkOutDate)})`
       : ''
     return {
       entry,
@@ -438,15 +453,11 @@ export default function RatesCalendarPage() {
                                 ) : status === 'cerrado24' ? (
                                   <span className="text-amber-600 font-medium">Cerrado 24hs</span>
                                 ) : entry && entry.price ? (
-                                  <span className="text-gray-800 font-medium">${entry.price.toLocaleString('es-AR')}</span>
+                                  <span className="text-gray-800 font-medium">USD {entry.price.toLocaleString('es-AR')}</span>
                                 ) : (
                                   <span className="text-gray-400">Precio x noche</span>
                                 )}
-                                {booking && (
-                                  <span className="mt-1 block truncate rounded bg-violet-100 px-1 text-[10px] font-medium text-violet-700">
-                                    Reservado
-                                  </span>
-                                )}
+                                {booking && <BookingBadge confirmed={booking.status === 'CONFIRMADA'} />}
                               </div>
                               {stripe && (
                                 <span
@@ -510,15 +521,11 @@ export default function RatesCalendarPage() {
                               ) : status === 'cerrado24' ? (
                                 <span className="text-amber-600 font-medium">Cerrado 24hs</span>
                               ) : entry && entry.price ? (
-                                <span className="text-gray-800 font-medium">${entry.price.toLocaleString('es-AR')}</span>
+                                <span className="text-gray-800 font-medium">USD {entry.price.toLocaleString('es-AR')}</span>
                               ) : (
                                 <span className="text-gray-400">Precio x noche</span>
                               )}
-                              {booking && (
-                                <span className="mt-1 block truncate rounded bg-violet-100 px-1 text-[10px] font-medium text-violet-700">
-                                  Reservado
-                                </span>
-                              )}
+                              {booking && <BookingBadge confirmed={booking.status === 'CONFIRMADA'} />}
                               {stripe && (
                                 <span
                                   className="absolute bottom-0 left-0 right-0 h-1.5"
@@ -675,7 +682,7 @@ export default function RatesCalendarPage() {
 
               {/* Precio por noche */}
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">Precio por noche</label>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Precio por noche (USD)</label>
                 <input
                   type="number"
                   min="0"

@@ -1,12 +1,18 @@
 'use client'
 
-import { Calendar, RefreshCw, Home, DollarSign } from 'lucide-react'
+import { Calendar, RefreshCw, Home, DollarSign, Search } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import { canCurrent } from '@/lib/permissions'
 
+const tileClass =
+  'flex flex-col items-center justify-center border-2 border-gray-200 rounded-lg p-10 hover:border-indigo-500 hover:bg-indigo-50 transition-colors group'
+const iconClass = 'h-14 w-14 text-gray-600 group-hover:text-indigo-600 mb-4'
+const labelClass = 'text-sm font-semibold uppercase tracking-wide text-gray-700 text-center'
+
 export default function RatesHomePage() {
-  // Planes y sincronización sólo para quien puede modificar tarifas (Reservas sólo consulta).
+  // Planes y sincronización sólo para quien puede modificar tarifas. Calendario y
+  // Buscador de disponibilidad los ve cualquiera que consulte disponibilidad (p. ej. Reservas).
   const canEdit = canCurrent('rates.edit')
   return (
     <div className="min-h-screen bg-gray-50">
@@ -21,32 +27,28 @@ export default function RatesHomePage() {
         </div>
 
         <div className="bg-white shadow rounded-lg p-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
+          <div className={`grid grid-cols-1 gap-6 mx-auto ${canEdit ? 'sm:grid-cols-2 lg:grid-cols-4 max-w-5xl' : 'sm:grid-cols-2 max-w-xl'}`}>
             {canEdit && (
-              <Link
-                href="/rates/plans"
-                className="flex flex-col items-center justify-center border-2 border-gray-200 rounded-lg p-10 hover:border-indigo-500 hover:bg-indigo-50 transition-colors group"
-              >
-                <DollarSign className="h-14 w-14 text-gray-600 group-hover:text-indigo-600 mb-4" />
-                <span className="text-sm font-semibold uppercase tracking-wide text-gray-700 text-center">Planes de Tarifa</span>
+              <Link href="/rates/plans" className={tileClass}>
+                <DollarSign className={iconClass} />
+                <span className={labelClass}>Planes de Tarifa</span>
               </Link>
             )}
 
-            <Link
-              href="/rates/calendar"
-              className="flex flex-col items-center justify-center border-2 border-gray-200 rounded-lg p-10 hover:border-indigo-500 hover:bg-indigo-50 transition-colors group"
-            >
-              <Calendar className="h-14 w-14 text-gray-600 group-hover:text-indigo-600 mb-4" />
-              <span className="text-sm font-semibold uppercase tracking-wide text-gray-700 text-center">Calendario</span>
+            <Link href="/rates/calendar" className={tileClass}>
+              <Calendar className={iconClass} />
+              <span className={labelClass}>Calendario</span>
+            </Link>
+
+            <Link href="/rates/search" className={tileClass}>
+              <Search className={iconClass} />
+              <span className={labelClass}>Buscador de disponibilidad</span>
             </Link>
 
             {canEdit && (
-              <Link
-                href="/rates/sync"
-                className="flex flex-col items-center justify-center border-2 border-gray-200 rounded-lg p-10 hover:border-indigo-500 hover:bg-indigo-50 transition-colors group"
-              >
-                <RefreshCw className="h-14 w-14 text-gray-600 group-hover:text-indigo-600 mb-4" />
-                <span className="text-sm font-semibold uppercase tracking-wide text-gray-700 text-center">Sincronizar Calendario</span>
+              <Link href="/rates/sync" className={tileClass}>
+                <RefreshCw className={iconClass} />
+                <span className={labelClass}>Sincronizar Calendario</span>
               </Link>
             )}
           </div>

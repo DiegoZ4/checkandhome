@@ -150,21 +150,31 @@ export function nightsFromCalendar(rates: RatesMap, propertyId: string, checkIn:
 }
 
 /**
- * Reservas que se superponen con las fechas dadas (las canceladas no cuentan).
+ * Reservas que se superponen con las fechas dadas.
  * Las fechas son YYYY-MM-DD; el día de check-out queda libre, así que una reserva puede
  * entrar el mismo día en que sale la anterior.
+ * - status 'CONFIRMADA' (por defecto): las que OCUPAN las noches (bloquean la reserva).
+ * - status 'PENDIENTE': las pendientes, que no ocupan; sólo se informan.
  * - field 'propertyId': choca en el mismo alojamiento.
  * - field 'cocheraId': choca en la misma cochera (sólo reservas con cochera activada).
+ * Mismo criterio que el buscador de disponibilidad (availability.ts) y el servidor.
  */
 export function findOverlaps(
   reservations: Reservation[],
-  opts: { field: 'propertyId' | 'cocheraId'; id: string; checkIn: string; checkOut: string; excludeId?: number | null },
+  opts: {
+    field: 'propertyId' | 'cocheraId'
+    id: string
+    checkIn: string
+    checkOut: string
+    excludeId?: number | null
+    status?: 'CONFIRMADA' | 'PENDIENTE'
+  },
 ): Reservation[] {
-  const { field, id, checkIn, checkOut, excludeId } = opts
+  const { field, id, checkIn, checkOut, excludeId, status = 'CONFIRMADA' } = opts
   if (!id || !checkIn || !checkOut || checkIn >= checkOut) return []
   return reservations.filter(r =>
     r.id !== excludeId &&
-    r.status !== 'CANCELADA' &&
+    r.status === status &&
     String(r[field]) === id &&
     (field !== 'cocheraId' || r.cocheraEnabled) &&
     r.checkInDate < checkOut &&

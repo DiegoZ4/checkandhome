@@ -101,9 +101,10 @@ const shortDate = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0
 
 /**
  * Verifica la disponibilidad antes de guardar: la propiedad (y la cochera, si se pidió)
- * no puede tener otra reserva no cancelada que se cruce con las fechas. El día de
- * check-out queda libre. Si la reserva ya existía y no cambió propiedad / cochera /
- * fechas, no se vuelve a verificar (para poder editar otros datos de reservas viejas).
+ * no puede tener otra reserva CONFIRMADA que se cruce con las fechas (las pendientes no
+ * ocupan noches, igual que en el buscador de disponibilidad). El día de check-out queda
+ * libre. Si la reserva ya existía y no cambió estado / propiedad / cochera / fechas, no
+ * se vuelve a verificar (para poder editar otros datos de reservas viejas).
  */
 async function checkAvailability(item: Item) {
   if (item.status === 'CANCELADA') return
@@ -115,8 +116,9 @@ async function checkAvailability(item: Item) {
   if (checkIn >= checkOut) throw new BadItemError('El check-out debe ser posterior al check-in.')
 
   const prev = await prisma.reservation.findUnique({ where: { id } })
-  const sameDates = !!prev && prev.status !== 'CANCELADA' && prev.checkInDate === checkIn && prev.checkOutDate === checkOut
-  const overlapping = { id: { not: id }, status: { not: 'CANCELADA' }, checkInDate: { lt: checkOut }, checkOutDate: { gt: checkIn } }
+  // Al confirmar una pendiente se vuelve a verificar: otra pudo confirmarse en esas noches.
+  const sameDates = !!prev && prev.status === item.status && prev.checkInDate === checkIn && prev.checkOutDate === checkOut
+  const overlapping = { id: { not: id }, status: 'CONFIRMADA', checkInDate: { lt: checkOut }, checkOutDate: { gt: checkIn } }
   const who = (r: { firstName: string; lastName: string; checkInDate: string; checkOutDate: string }) =>
     `del ${shortDate(r.checkInDate)} al ${shortDate(r.checkOutDate)} (${`${r.firstName} ${r.lastName}`.trim() || 'sin nombre'})`
 

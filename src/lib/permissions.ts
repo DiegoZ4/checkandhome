@@ -66,6 +66,7 @@ const ROUTE_RULES: { prefix: string; perm: Permission }[] = [
   { prefix: '/units', perm: 'properties.view' },
   { prefix: '/rates/plans', perm: 'rates.edit' },
   { prefix: '/rates/sync', perm: 'rates.edit' },
+  { prefix: '/rates/search', perm: 'rates.view' }, // buscador de disponibilidad (Reservas incluido)
   { prefix: '/rates', perm: 'rates.view' },
   { prefix: '/bookings/new', perm: 'bookings.edit' },
   { prefix: '/bookings', perm: 'bookings.view' },

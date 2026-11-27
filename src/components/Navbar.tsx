@@ -45,6 +45,7 @@ const MENU_ITEMS: {
     icon: CalendarRange,
     children: [
       { label: 'Calendario', href: '/rates/calendar' },
+      { label: 'Buscador de disponibilidad', href: '/rates/search' },
       { label: 'Planes de Tarifa', href: '/rates/plans' },
       { label: 'Sincronizar Calendario', href: '/rates/sync' },
     ],

@@ -310,18 +310,27 @@ function BookingForm() {
   const money = (v: number) => v.toLocaleString('es-AR')
   const currencySymbol = data.currency === 'PESOS' ? '$' : 'US$'
 
-  // Reservas que chocan con las fechas elegidas (mismo alojamiento / misma cochera).
-  const overlapsFor = (list: Reservation[]) => ({
-    property: findOverlaps(list, {
-      field: 'propertyId', id: data.propertyId, checkIn: data.checkInDate, checkOut: data.checkOutDate, excludeId: editingId,
-    }),
-    cochera: data.cocheraEnabled
-      ? findOverlaps(list, {
-          field: 'cocheraId', id: data.cocheraId, checkIn: data.checkInDate, checkOut: data.checkOutDate, excludeId: editingId,
-        })
-      : [],
-  })
+  // Reservas CONFIRMADAS que chocan con las fechas elegidas (mismo alojamiento / misma
+  // cochera): bloquean. Las pendientes no ocupan noches, sólo se avisan. Una reserva que
+  // se guarda cancelada no se verifica.
+  const overlapsFor = (list: Reservation[]) => {
+    if (data.status === 'CANCELADA') return { property: [], cochera: [] }
+    return {
+      property: findOverlaps(list, {
+        field: 'propertyId', id: data.propertyId, checkIn: data.checkInDate, checkOut: data.checkOutDate, excludeId: editingId,
+      }),
+      cochera: data.cocheraEnabled
+        ? findOverlaps(list, {
+            field: 'cocheraId', id: data.cocheraId, checkIn: data.checkInDate, checkOut: data.checkOutDate, excludeId: editingId,
+          })
+        : [],
+    }
+  }
   const overlaps = overlapsFor(allReservations)
+  const pendingOverlaps = findOverlaps(allReservations, {
+    field: 'propertyId', id: data.propertyId, checkIn: data.checkInDate, checkOut: data.checkOutDate,
+    excludeId: editingId, status: 'PENDIENTE',
+  })
 
   const describeOverlap = (r: Reservation) =>
     `${`${r.firstName} ${r.lastName}`.trim() || 'Sin nombre'} (${shortDate(r.checkInDate)} al ${shortDate(r.checkOutDate)}, ${r.status.toLowerCase()})`
@@ -643,6 +652,17 @@ function BookingForm() {
                   <p className="font-medium">La propiedad ya está reservada en esas fechas:</p>
                   <ul className="mt-1 list-disc pl-5">
                     {overlaps.property.map(r => <li key={r.id}>{describeOverlap(r)}</li>)}
+                  </ul>
+                </div>
+              )}
+              {pendingOverlaps.length > 0 && data.status !== 'CANCELADA' && (
+                <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  <p className="font-medium">
+                    Hay {pendingOverlaps.length} reserva{pendingOverlaps.length === 1 ? '' : 's'} pendiente{pendingOverlaps.length === 1 ? '' : 's'} en esas fechas
+                    (no ocupan las noches hasta confirmarse):
+                  </p>
+                  <ul className="mt-1 list-disc pl-5">
+                    {pendingOverlaps.map(r => <li key={r.id}>{describeOverlap(r)}</li>)}
                   </ul>
                 </div>
               )}

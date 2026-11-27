@@ -293,19 +293,34 @@ export async function pullFromServer(token = getToken()): Promise<PullResult> {
   if (!token) return 'unauthorized'
   const startedAt = writeCounter
 
+  // Cada colección se descarga por separado: si una falla (p. ej. error del servidor),
+  // las demás se cargan igual y se avisa, en vez de dejar la pantalla sin datos.
   let responses: { cfg: CollectionConfig; data: { items?: Item[]; value?: unknown } }[]
+  const failed: string[] = []
   try {
     responses = await Promise.all(
       COLLECTIONS.map(async (cfg) => {
-        const res = await fetch(cfg.endpoint, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+        let res: Response
+        try {
+          res = await fetch(cfg.endpoint, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+        } catch {
+          throw new Error('offline') // sin conexión: no se descarga nada
+        }
         if (res.status === 401) throw new Error('unauthorized')
         if (res.status === 403) return null // el tipo de usuario no puede ver esta colección
-        if (!res.ok) throw new Error('offline')
+        if (!res.ok) {
+          console.error(`[cloudSync] No se pudo descargar ${cfg.endpoint}: HTTP ${res.status}`)
+          failed.push(cfg.endpoint)
+          return null
+        }
         return { cfg, data: await res.json() }
       }),
     ).then((list) => list.filter((x): x is NonNullable<typeof x> => x !== null))
   } catch (err) {
     return (err as Error).message === 'unauthorized' ? 'unauthorized' : 'offline'
+  }
+  if (failed.length) {
+    window.dispatchEvent(new CustomEvent('checkandpoint:sync-error', { detail: failed }))
   }
 
   // Si una página guardó algo mientras se descargaba, se vuelve a intentar después.
